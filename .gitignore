@@ -1,0 +1,59 @@
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Build output
+dist/
+build/
+out/
+*.tsbuildinfo
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# Coverage / reports
+coverage/
+.nyc_output/
+*.lcov
+
+# Cache
+.cache/
+.tmp/
+temp/
+.tmp*/
+.eslintcache
+
+# TypeScript (optional if you use declarations elsewhere)
+*.d.ts.map
+*.js.map
+
+# OS junk
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Windows / PowerShell
+*.lnk
+
+# IDEs / editors
+.vscode/
+!.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/launch.json
+!.vscode/tasks.json
+.idea/
+*.iml
+
+# Logs
+logs/
+*.log
+
+# Optional: local state for your tool (Ragna Tramp)
+.ragnatramp/
