@@ -1,0 +1,11 @@
+# Minimal valid configuration with 1 machine
+project:
+  name: testproject
+
+defaults:
+  cpu: 2
+  memory: 2048
+  base_image: "C:/HyperV/Golden/test-image.vhdx"
+
+machines:
+  - name: web

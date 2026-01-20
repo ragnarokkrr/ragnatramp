@@ -1,0 +1,11 @@
+# Invalid: cpu must be an integer, not a string
+project:
+  name: badtypes
+
+defaults:
+  cpu: "lots"
+  memory: 2048
+  base_image: "C:/HyperV/Golden/test.vhdx"
+
+machines:
+  - name: web

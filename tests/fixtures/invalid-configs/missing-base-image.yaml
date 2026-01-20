@@ -1,0 +1,11 @@
+# Invalid: no base_image in defaults and not all machines have base_image
+project:
+  name: noimage
+
+defaults:
+  cpu: 2
+  memory: 2048
+
+machines:
+  - name: web
+  - name: db

@@ -54,12 +54,12 @@
 
 ### Unit Tests
 
-- [ ] T017 [P] Create `tests/fixtures/valid-configs/minimal.yaml` with project name, defaults, 1 machine
-- [ ] T018 [P] Create `tests/fixtures/valid-configs/two-vms.yaml` per spec example
-- [ ] T019 [P] Create `tests/fixtures/valid-configs/three-vms.yaml` per spec example
-- [ ] T020 [P] Create `tests/fixtures/invalid-configs/missing-machines.yaml`
-- [ ] T021 [P] Create `tests/fixtures/invalid-configs/invalid-cpu-type.yaml` (cpu: "lots")
-- [ ] T022 [P] Create `tests/fixtures/invalid-configs/missing-base-image.yaml`
+- [x] T017 [P] Create `tests/fixtures/valid-configs/minimal.yaml` with project name, defaults, 1 machine
+- [x] T018 [P] Create `tests/fixtures/valid-configs/two-vms.yaml` per spec example
+- [x] T019 [P] Create `tests/fixtures/valid-configs/three-vms.yaml` per spec example
+- [x] T020 [P] Create `tests/fixtures/invalid-configs/missing-machines.yaml`
+- [x] T021 [P] Create `tests/fixtures/invalid-configs/invalid-cpu-type.yaml` (cpu: "lots")
+- [x] T022 [P] Create `tests/fixtures/invalid-configs/missing-base-image.yaml`
 - [ ] T023 Create `tests/unit/config/loader.test.ts` with tests: load valid YAML, invalid YAML syntax, file not found
 - [ ] T024 Create `tests/unit/config/validator.test.ts` with tests: valid config passes, missing fields rejected, invalid types rejected
 - [ ] T025 Create `tests/unit/config/resolver.test.ts` with tests: defaults applied, per-machine overrides work, paths expanded

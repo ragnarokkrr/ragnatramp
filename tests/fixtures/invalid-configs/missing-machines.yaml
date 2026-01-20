@@ -1,0 +1,8 @@
+# Invalid: missing required 'machines' array
+project:
+  name: incomplete
+
+defaults:
+  cpu: 2
+  memory: 2048
+  base_image: "C:/HyperV/Golden/test.vhdx"

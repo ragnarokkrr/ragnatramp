@@ -1,0 +1,24 @@
+# Configuration with 3 VMs (maximum supported)
+project:
+  name: fullstack
+
+defaults:
+  cpu: 2
+  memory: 2048
+  base_image: "C:/HyperV/Golden/ubuntu-22.04.vhdx"
+  disk_strategy: differencing
+
+machines:
+  - name: frontend
+    memory: 4096
+  - name: backend
+    cpu: 4
+    memory: 4096
+  - name: database
+    cpu: 4
+    memory: 8192
+    base_image: "C:/HyperV/Golden/postgres-15.vhdx"
+
+settings:
+  artifact_path: "~/.ragnatramp/vms/fullstack"
+  auto_start: true

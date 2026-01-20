@@ -1,0 +1,15 @@
+# Configuration with 2 VMs per spec example
+project:
+  name: myproject
+
+defaults:
+  cpu: 2
+  memory: 2048
+  base_image: "C:/HyperV/Golden/ubuntu-22.04.vhdx"
+
+machines:
+  - name: web
+    memory: 4096
+  - name: db
+    cpu: 4
+    memory: 8192
