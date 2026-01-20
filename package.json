@@ -1,24 +1,36 @@
 {
   "name": "ragnatramp",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "tsc",
-    "dev": "tsx src/cli.ts"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "version": "0.1.0",
+  "description": "Vagrant-like VM orchestration for Hyper-V on Windows 11 Pro",
+  "main": "dist/cli/index.js",
   "type": "module",
   "bin": {
-    "ragnatramp": "./dist/cli.js"
+    "ragnatramp": "./dist/cli/index.js",
+    "Ragnatramp": "./dist/cli/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx src/cli/index.ts",
+    "test": "node --import tsx --test tests/**/*.test.ts",
+    "lint": "tsc --noEmit"
+  },
+  "keywords": ["hyper-v", "vm", "orchestration", "vagrant"],
+  "author": "",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "dependencies": {
+    "commander": "^12.0.0",
+    "js-yaml": "^4.1.0",
+    "ajv": "^8.12.0",
+    "ajv-formats": "^3.0.1"
   },
   "devDependencies": {
-    "@types/node": "^25.0.9",
-    "eslint": "^9.39.2",
-    "tsx": "^4.21.0",
-    "typescript": "^5.9.3"
+    "@types/node": "^20.0.0",
+    "@types/js-yaml": "^4.0.9",
+    "eslint": "^9.0.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.4.0"
   }
 }
