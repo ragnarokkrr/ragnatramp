@@ -52,11 +52,26 @@ Generate a high-quality git commit message based on staged changes.
    - Each bullet starts with `- `
    - Focus on intent, not just listing files
 
-6. **Output ONLY the commit message**. Do NOT:
-   - Run `git commit`
-   - Add markdown code fences around the output
-   - Add explanatory text before or after
-   - Include file lists without context
+6. **Output the commit message** in a code block for review. Do NOT add explanatory text before or after the code block.
+
+7. **Ask for confirmation** using the AskUserQuestion tool:
+   - Question: "Proceed with this commit message?"
+   - Options:
+     - "Yes, commit" - Run the commit
+     - "Edit message" - Let user provide a modified message
+     - "Cancel" - Abort without committing
+
+8. **If confirmed**, run the commit using a HEREDOC:
+   ```bash
+   git commit -m "$(cat <<'EOF'
+   <commit message here>
+   EOF
+   )"
+   ```
+
+9. **If user wants to edit**, ask them to provide the corrected message, then commit with their version.
+
+10. **If cancelled**, respond with "Commit cancelled." and stop.
 
 ## Examples
 
