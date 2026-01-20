@@ -115,17 +115,22 @@
       "description": "base_image must be specified either in defaults or in every machine",
       "if": {
         "not": {
+          "type": "object",
           "properties": {
             "defaults": {
+              "type": "object",
               "required": ["base_image"]
             }
           }
         }
       },
       "then": {
+        "type": "object",
         "properties": {
           "machines": {
+            "type": "array",
             "items": {
+              "type": "object",
               "required": ["name", "base_image"]
             }
           }

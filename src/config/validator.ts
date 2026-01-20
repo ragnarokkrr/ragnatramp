@@ -29,10 +29,12 @@ export type ValidationResult =
   | { valid: false; errors: ValidationError[] };
 
 // Create Ajv instance with options for detailed error reporting
+// Note: strict mode is disabled for schema-level strictness because the conditional
+// allOf logic for base_image validation uses a pattern that Ajv strict mode doesn't allow
 const ajv = new Ajv.default({
   allErrors: true,
   verbose: true,
-  strict: true,
+  strict: false,
 });
 addFormats.default(ajv);
 

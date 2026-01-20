@@ -60,9 +60,9 @@
 - [x] T020 [P] Create `tests/fixtures/invalid-configs/missing-machines.yaml`
 - [x] T021 [P] Create `tests/fixtures/invalid-configs/invalid-cpu-type.yaml` (cpu: "lots")
 - [x] T022 [P] Create `tests/fixtures/invalid-configs/missing-base-image.yaml`
-- [ ] T023 Create `tests/unit/config/loader.test.ts` with tests: load valid YAML, invalid YAML syntax, file not found
-- [ ] T024 Create `tests/unit/config/validator.test.ts` with tests: valid config passes, missing fields rejected, invalid types rejected
-- [ ] T025 Create `tests/unit/config/resolver.test.ts` with tests: defaults applied, per-machine overrides work, paths expanded
+- [x] T023 Create `tests/unit/config/loader.test.ts` with tests: load valid YAML, invalid YAML syntax, file not found
+- [x] T024 Create `tests/unit/config/validator.test.ts` with tests: valid config passes, missing fields rejected, invalid types rejected
+- [x] T025 Create `tests/unit/config/resolver.test.ts` with tests: defaults applied, per-machine overrides work, paths expanded
 
 **Verification**: `npm test` passes all config tests. Invalid configs produce clear, actionable error messages.
 
