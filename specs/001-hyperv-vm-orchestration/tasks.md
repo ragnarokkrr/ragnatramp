@@ -42,8 +42,8 @@
 
 ### Type Definitions
 
-- [ ] T011 [P] Create `src/config/types.ts` with RagnatrampConfig, ProjectConfig, DefaultsConfig, MachineConfig, SettingsConfig interfaces
-- [ ] T012 [P] Create `src/config/types.ts` with ResolvedMachine and ResolvedConfig interfaces (defaults applied)
+- [x] T011 [P] Create `src/config/types.ts` with RagnatrampConfig, ProjectConfig, DefaultsConfig, MachineConfig, SettingsConfig interfaces
+- [x] T012 [P] Create `src/config/types.ts` with ResolvedMachine and ResolvedConfig interfaces (defaults applied)
 
 ### Core Implementation
 
