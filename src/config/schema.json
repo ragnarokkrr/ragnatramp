@@ -1,0 +1,136 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://ragnatramp.dev/schemas/config.json",
+  "title": "Ragnatramp Configuration",
+  "description": "Schema for ragnatramp.yaml configuration files",
+  "type": "object",
+  "required": ["project", "machines"],
+  "additionalProperties": false,
+  "properties": {
+    "project": {
+      "type": "object",
+      "description": "Project identification",
+      "required": ["name"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Project name used in VM naming",
+          "pattern": "^[a-zA-Z][a-zA-Z0-9-]{0,31}$",
+          "minLength": 1,
+          "maxLength": 32
+        }
+      }
+    },
+    "defaults": {
+      "type": "object",
+      "description": "Default values applied to all machines",
+      "additionalProperties": false,
+      "properties": {
+        "cpu": {
+          "type": "integer",
+          "description": "Number of virtual CPUs",
+          "minimum": 1,
+          "maximum": 64,
+          "default": 2
+        },
+        "memory": {
+          "type": "integer",
+          "description": "Memory in MB",
+          "minimum": 512,
+          "maximum": 1048576,
+          "default": 2048
+        },
+        "base_image": {
+          "type": "string",
+          "description": "Path to golden VHDX image",
+          "minLength": 1
+        },
+        "disk_strategy": {
+          "type": "string",
+          "description": "Disk creation strategy",
+          "enum": ["differencing", "copy"],
+          "default": "differencing"
+        }
+      }
+    },
+    "machines": {
+      "type": "array",
+      "description": "List of machines to create",
+      "minItems": 1,
+      "maxItems": 3,
+      "items": {
+        "type": "object",
+        "required": ["name"],
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Machine name, unique within project",
+            "pattern": "^[a-zA-Z][a-zA-Z0-9-]{0,15}$",
+            "minLength": 1,
+            "maxLength": 16
+          },
+          "cpu": {
+            "type": "integer",
+            "description": "Override default CPU count",
+            "minimum": 1,
+            "maximum": 64
+          },
+          "memory": {
+            "type": "integer",
+            "description": "Override default memory (MB)",
+            "minimum": 512,
+            "maximum": 1048576
+          },
+          "base_image": {
+            "type": "string",
+            "description": "Override default base image path",
+            "minLength": 1
+          }
+        }
+      },
+      "uniqueItems": true
+    },
+    "settings": {
+      "type": "object",
+      "description": "Optional global settings",
+      "additionalProperties": false,
+      "properties": {
+        "artifact_path": {
+          "type": "string",
+          "description": "Path for VM artifacts (disks, etc.)",
+          "minLength": 1
+        },
+        "auto_start": {
+          "type": "boolean",
+          "description": "Start VMs after creation",
+          "default": true
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "description": "base_image must be specified either in defaults or in every machine",
+      "if": {
+        "not": {
+          "properties": {
+            "defaults": {
+              "required": ["base_image"]
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "machines": {
+            "items": {
+              "required": ["name", "base_image"]
+            }
+          }
+        }
+      }
+    }
+  ]
+}

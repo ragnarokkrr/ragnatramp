@@ -47,10 +47,10 @@
 
 ### Core Implementation
 
-- [ ] T013 Copy `contracts/config-schema.json` to `src/config/schema.json`
-- [ ] T014 Create `src/config/loader.ts` with `loadYamlFile(path)` function using js-yaml safeLoad
-- [ ] T015 Create `src/config/validator.ts` with `validateConfig(data)` using ajv, allErrors mode, detailed error formatting
-- [ ] T016 Create `src/config/resolver.ts` with `resolveConfig(config, configPath)` to apply defaults, merge per-machine overrides
+- [x] T013 Copy `contracts/config-schema.json` to `src/config/schema.json`
+- [x] T014 Create `src/config/loader.ts` with `loadYamlFile(path)` function using js-yaml safeLoad
+- [x] T015 Create `src/config/validator.ts` with `validateConfig(data)` using ajv, allErrors mode, detailed error formatting
+- [x] T016 Create `src/config/resolver.ts` with `resolveConfig(config, configPath)` to apply defaults, merge per-machine overrides
 
 ### Unit Tests
 
