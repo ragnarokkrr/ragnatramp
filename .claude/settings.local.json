@@ -4,7 +4,15 @@
       "Bash(git add:*)",
       "Bash(git commit -m \"$\\(cat <<''EOF''\nchore: initialize TypeScript project scaffold\n\n- package.json with build/dev/test scripts and bin entry\n- tsconfig.json with strict settings \\(ES modules, nodenext\\)\n- Minimal CLI entry point \\(src/cli.ts\\)\n- .gitignore for node_modules and dist\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
       "Bash(powershell.exe:*)",
-      "Bash(node dist/cli/index.js:*)"
+      "Bash(node dist/cli/index.js:*)",
+      "Bash(powershell -ExecutionPolicy Bypass -File:*)",
+      "Bash(if not exist \"C:\\\\Users\\\\PadilhaN\\\\prj\\\\ragnatramp\\\\src\\\\config\" mkdir \"C:\\\\Users\\\\PadilhaN\\\\prj\\\\ragnatramp\\\\src\\\\config\")",
+      "Bash(powershell -Command:*)",
+      "Bash(npm run build:*)",
+      "Bash(git commit:*)",
+      "Bash(npm run lint)",
+      "Bash(npm test)",
+      "Bash(node:*)"
     ]
   }
 }

@@ -76,20 +76,20 @@
 
 ### Type Definitions
 
-- [ ] T026 [P] Create `src/state/types.ts` with StateFile, VMState, CheckpointState interfaces per data-model.md
+- [x] T026 [P] Create `src/state/types.ts` with StateFile, VMState, CheckpointState interfaces per data-model.md
 
 ### Core Implementation
 
-- [ ] T027 Create `src/lib/hash.ts` with `computeConfigHash(path)` returning first 8 chars of SHA256
-- [ ] T028 Create `src/lib/paths.ts` with `expandPath(path)` resolving ~, env vars; `getStatePath(configPath)` returning `.ragnatramp/state.json`
-- [ ] T029 Create `src/state/manager.ts` with `StateManager` class: `load()`, `save()`, `exists()`, `create()`, `addVM()`, `removeVM()`, `addCheckpoint()`
-- [ ] T030 Implement atomic write in StateManager: write to `.state.json.tmp` then rename to `state.json`
+- [x] T027 Create `src/lib/hash.ts` with `computeConfigHash(path)` returning first 8 chars of SHA256
+- [x] T028 Create `src/lib/paths.ts` with `expandPath(path)` resolving ~, env vars; `getStatePath(configPath)` returning `.ragnatramp/state.json`
+- [x] T029 Create `src/state/manager.ts` with `StateManager` class: `load()`, `save()`, `exists()`, `create()`, `addVM()`, `removeVM()`, `addCheckpoint()`
+- [x] T030 Implement atomic write in StateManager: write to `.state.json.tmp` then rename to `state.json`
 
 ### Unit Tests
 
-- [ ] T031 [P] Create `tests/unit/lib/hash.test.ts` with tests: deterministic output, 8 char length, different inputs produce different hashes
-- [ ] T032 [P] Create `tests/unit/lib/paths.test.ts` with tests: ~ expansion, state path relative to config
-- [ ] T033 Create `tests/unit/state/manager.test.ts` with tests: create new state, load existing, add/remove VM, atomic write safety
+- [x] T031 [P] Create `tests/unit/lib/hash.test.ts` with tests: deterministic output, 8 char length, different inputs produce different hashes
+- [x] T032 [P] Create `tests/unit/lib/paths.test.ts` with tests: ~ expansion, state path relative to config
+- [x] T033 Create `tests/unit/state/manager.test.ts` with tests: create new state, load existing, add/remove VM, atomic write safety
 
 **Verification**: `npm test` passes all state tests. State file survives concurrent access (atomic write).
 
