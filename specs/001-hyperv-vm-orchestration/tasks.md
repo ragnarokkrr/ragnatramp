@@ -103,31 +103,31 @@
 
 ### Type Definitions
 
-- [ ] T034 [P] Create `src/hyperv/types.ts` with HyperVVM, VMState enum, HyperVCheckpoint interfaces per data-model.md
-- [ ] T035 [P] Create `src/hyperv/types.ts` with CreateVMParams, CreateCheckpointParams interfaces
+- [x] T034 [P] Create `src/hyperv/types.ts` with HyperVVM, VMState enum, HyperVCheckpoint interfaces per data-model.md
+- [x] T035 [P] Create `src/hyperv/types.ts` with CreateVMParams, CreateCheckpointParams interfaces
 
 ### Core Implementation
 
-- [ ] T036 Create `src/hyperv/executor.ts` with `HyperVExecutor` class: `execute<T>(script)` spawning powershell.exe with -NoProfile -NonInteractive
-- [ ] T037 Add stdout/stderr capture and JSON parsing to executor
-- [ ] T038 Add exit code handling with error classification (access denied → exit 2, not found → exit 1)
-- [ ] T039 Create `src/hyperv/queries.ts` with `getVMs()`, `getVMByName(name)`, `getVMById(id)`, `getVMSnapshots(vmId)`
-- [ ] T040 Create `src/hyperv/commands.ts` with `buildGetVMsScript()` returning PowerShell script string
-- [ ] T041 Add `buildCreateVMScript(params)` to commands.ts (New-VM, Set-VM, New-VHD differencing, Add-VMHardDiskDrive, Connect-VMNetworkAdapter, Set-VM Notes)
-- [ ] T042 Add `buildStartVMScript(vmId)` to commands.ts
-- [ ] T043 Add `buildStopVMScript(vmId, force)` to commands.ts
-- [ ] T044 Add `buildRemoveVMScript(vmId)` to commands.ts
-- [ ] T045 Add `buildCheckpointVMScript(vmId, name)` to commands.ts
-- [ ] T046 Add `buildRestoreVMSnapshotScript(vmId, snapshotId)` to commands.ts
-- [ ] T047 Add `buildGetVMSnapshotsScript(vmId)` to queries.ts
+- [x] T036 Create `src/hyperv/executor.ts` with `HyperVExecutor` class: `execute<T>(script)` spawning powershell.exe with -NoProfile -NonInteractive
+- [x] T037 Add stdout/stderr capture and JSON parsing to executor
+- [x] T038 Add exit code handling with error classification (access denied → exit 2, not found → exit 1)
+- [x] T039 Create `src/hyperv/queries.ts` with `getVMs()`, `getVMByName(name)`, `getVMById(id)`, `getVMSnapshots(vmId)`
+- [x] T040 Create `src/hyperv/commands.ts` with `buildGetVMsScript()` returning PowerShell script string
+- [x] T041 Add `buildCreateVMScript(params)` to commands.ts (New-VM, Set-VM, New-VHD differencing, Add-VMHardDiskDrive, Connect-VMNetworkAdapter, Set-VM Notes)
+- [x] T042 Add `buildStartVMScript(vmId)` to commands.ts
+- [x] T043 Add `buildStopVMScript(vmId, force)` to commands.ts
+- [x] T044 Add `buildRemoveVMScript(vmId)` to commands.ts
+- [x] T045 Add `buildCheckpointVMScript(vmId, name)` to commands.ts
+- [x] T046 Add `buildRestoreVMSnapshotScript(vmId, snapshotId)` to commands.ts
+- [x] T047 Add `buildGetVMSnapshotsScript(vmId)` to queries.ts
 
 ### Unit Tests (Mock Spawn)
 
-- [ ] T048 Create `tests/fixtures/mock-responses/get-vms-empty.json` (empty array)
-- [ ] T049 Create `tests/fixtures/mock-responses/get-vms-two.json` (two VMs with different states)
-- [ ] T050 Create `tests/fixtures/mock-responses/create-vm-success.json` (Id, Name)
-- [ ] T051 Create `tests/unit/hyperv/executor.test.ts` with mocked spawn: success path, JSON parsing, error handling
-- [ ] T052 Create `tests/unit/hyperv/commands.test.ts` with tests: script strings are well-formed, parameters escaped, all cmdlets present
+- [x] T048 Create `tests/fixtures/mock-responses/get-vms-empty.json` (empty array)
+- [x] T049 Create `tests/fixtures/mock-responses/get-vms-two.json` (two VMs with different states)
+- [x] T050 Create `tests/fixtures/mock-responses/create-vm-success.json` (Id, Name)
+- [x] T051 Create `tests/unit/hyperv/executor.test.ts` with mocked spawn: success path, JSON parsing, error handling
+- [x] T052 Create `tests/unit/hyperv/commands.test.ts` with tests: script strings are well-formed, parameters escaped, all cmdlets present
 
 **Verification**: `npm test` passes all PowerShell adapter tests. Scripts contain correct cmdlets and escaping.
 

@@ -1,0 +1,18 @@
+[
+  {
+    "Id": "12345678-1234-1234-1234-123456789abc",
+    "Name": "myproject-web-a1b2c3d4",
+    "State": "Running",
+    "Notes": "ragnatramp:C:/projects/myproject/ragnatramp.yaml\nManaged by Ragna Tramp v0.1.0",
+    "MemoryMB": 4096,
+    "CPUCount": 2
+  },
+  {
+    "Id": "87654321-4321-4321-4321-cba987654321",
+    "Name": "myproject-db-a1b2c3d4",
+    "State": "Off",
+    "Notes": "ragnatramp:C:/projects/myproject/ragnatramp.yaml\nManaged by Ragna Tramp v0.1.0",
+    "MemoryMB": 8192,
+    "CPUCount": 4
+  }
+]
