@@ -141,23 +141,23 @@
 
 ### Type Definitions
 
-- [ ] T053 [P] Create `src/core/types.ts` with ActionType, Action, ActionDetails interfaces per data-model.md
-- [ ] T054 [P] Create `src/core/errors.ts` with RagnatrampError class, ErrorCode enum, HyperVError class
+- [x] T053 [P] Create `src/core/types.ts` with ActionType, Action, ActionDetails interfaces per data-model.md
+- [x] T054 [P] Create `src/core/errors.ts` with RagnatrampError class, ErrorCode enum, HyperVError class
 
 ### Core Implementation
 
-- [ ] T055 Create `src/core/naming.ts` with `generateVMName(project, machine, configPath)` returning `{project}-{machine}-{hash8}`
-- [ ] T056 Create `src/core/preflight.ts` with `checkHyperVAvailable()`, `checkDefaultSwitch()`, `checkBaseImageExists(path)`
-- [ ] T057 Create `src/core/preflight.ts` with `verifyOwnership(vmName, state, actualVM, configPath)` implementing triple verification
-- [ ] T058 Create `src/core/planner.ts` with `computePlan(config, state, actualVMs)` returning Action[] for create/start/stop
-- [ ] T059 Create `src/core/reconciler.ts` with `executeActions(actions, executor, stateManager)` executing each action and updating state
-- [ ] T060 Create `src/lib/logger.ts` with `Logger` class supporting human-readable and JSON output modes
+- [x] T055 Create `src/core/naming.ts` with `generateVMName(project, machine, configPath)` returning `{project}-{machine}-{hash8}`
+- [x] T056 Create `src/core/preflight.ts` with `checkHyperVAvailable()`, `checkDefaultSwitch()`, `checkBaseImageExists(path)`
+- [x] T057 Create `src/core/preflight.ts` with `verifyOwnership(vmName, state, actualVM, configPath)` implementing triple verification
+- [x] T058 Create `src/core/planner.ts` with `computePlan(config, state, actualVMs)` returning Action[] for create/start/stop
+- [x] T059 Create `src/core/reconciler.ts` with `executeActions(actions, executor, stateManager)` executing each action and updating state
+- [x] T060 Create `src/lib/logger.ts` with `Logger` class supporting human-readable and JSON output modes
 
 ### Unit Tests
 
-- [ ] T061 Create `tests/unit/core/naming.test.ts` with tests: deterministic names, hash uniqueness, pattern matching
-- [ ] T062 Create `tests/unit/core/planner.test.ts` with tests: create actions for new VMs, start actions for stopped, no actions when converged
-- [ ] T063 Create `tests/unit/core/preflight.test.ts` with tests: ownership passes with all checks, fails with missing state, fails with wrong notes
+- [x] T061 Create `tests/unit/core/naming.test.ts` with tests: deterministic names, hash uniqueness, pattern matching
+- [x] T062 Create `tests/unit/core/planner.test.ts` with tests: create actions for new VMs, start actions for stopped, no actions when converged
+- [x] T063 Create `tests/unit/core/preflight.test.ts` with tests: ownership passes with all checks, fails with missing state, fails with wrong notes
 
 **Verification**: `npm test` passes all core tests. Planner correctly computes drift.
 
