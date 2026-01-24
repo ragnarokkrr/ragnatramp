@@ -169,9 +169,9 @@
 
 **Purpose**: Consistent human-readable and JSON output formatting
 
-- [ ] T064 Create `src/cli/output.ts` with `OutputFormatter` class: `success()`, `error()`, `action()`, `table()`
-- [ ] T065 Add JSON output mode to OutputFormatter, toggled by --json flag
-- [ ] T066 Create `src/cli/output.ts` with CommandResult, ActionResult, ErrorOutput types per data-model.md
+- [x] T064 Create `src/cli/output.ts` with `OutputFormatter` class: `success()`, `error()`, `action()`, `table()`
+- [x] T065 Add JSON output mode to OutputFormatter, toggled by --json flag
+- [x] T066 Create `src/cli/output.ts` with CommandResult, ActionResult, ErrorOutput types per data-model.md
 
 **Verification**: Output matches quickstart.md examples for both human and JSON modes.
 
