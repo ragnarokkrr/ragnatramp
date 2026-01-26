@@ -304,18 +304,18 @@
 
 ### Implementation
 
-- [ ] T094 [US6] Register `destroy` command in `src/cli/index.ts` with optional `[machine]` and `--all` option
-- [ ] T095 [US6] Create `src/cli/commands/destroy.ts` with destroyCommand handler: ownership verification, stop, remove, delete disk
-- [ ] T096 [US6] Implement triple ownership verification before any deletion
-- [ ] T097 [US6] Delete differencing VHDX file after VM removal
-- [ ] T098 [US6] Update/delete state file after all VMs destroyed
+- [x] T094 [US6] Register `destroy` command in `src/cli/index.ts` with optional `[machine]` and `--all` option
+- [x] T095 [US6] Create `src/cli/commands/destroy.ts` with destroyCommand handler: ownership verification, stop, remove, delete disk
+- [x] T096 [US6] Implement triple ownership verification before any deletion
+- [x] T097 [US6] Delete differencing VHDX file after VM removal
+- [x] T098 [US6] Update/delete state file after all VMs destroyed
 
 ### Safety Tests (CRITICAL)
 
-- [ ] T099 [P] [US6] Create `tests/integration/destroy-safety.test.ts` with test: refuses to delete VM not in state file
-- [ ] T100 [P] [US6] Create `tests/integration/destroy-safety.test.ts` with test: refuses to delete VM with wrong Notes marker
-- [ ] T101 [P] [US6] Create `tests/integration/destroy-safety.test.ts` with test: refuses to delete VM with non-matching name pattern
-- [ ] T102 [P] [US6] Create `tests/integration/destroy-safety.test.ts` with test: warns but continues if unmanaged VM has similar name
+- [x] T099 [P] [US6] Create `tests/integration/destroy-safety.test.ts` with test: refuses to delete VM not in state file
+- [x] T100 [P] [US6] Create `tests/integration/destroy-safety.test.ts` with test: refuses to delete VM with wrong Notes marker
+- [x] T101 [P] [US6] Create `tests/integration/destroy-safety.test.ts` with test: refuses to delete VM with non-matching name pattern
+- [x] T102 [P] [US6] Create `tests/integration/destroy-safety.test.ts` with test: warns but continues if unmanaged VM has similar name
 
 **Verification**: `ragnatramp destroy` NEVER deletes unmanaged VMs. All safety tests pass.
 
