@@ -367,14 +367,14 @@
 
 **Purpose**: Final cleanup, consistency, and validation
 
-- [ ] T114 Add `--version` flag handling in CLI
-- [ ] T115 Add `--help` descriptions for all commands
-- [ ] T116 Standardize exit codes across all commands (0=success, 1=user error, 2=system error)
-- [ ] T117 Review all error messages for actionable guidance
-- [ ] T118 [P] Run all fixture configs through full command cycle (validate, plan, up, status, halt, destroy)
-- [ ] T119 [P] Run lint and fix any issues
-- [ ] T120 [P] Run test coverage and ensure >80% on config/state/core modules
-- [ ] T121 Create `npm pack` and verify package installs correctly
+- [x] T114 Add `--version` flag handling in CLI
+- [x] T115 Add `--help` descriptions for all commands
+- [x] T116 Standardize exit codes across all commands (0=success, 1=user error, 2=system error)
+- [x] T117 Review all error messages for actionable guidance
+- [x] T118 [P] Run all fixture configs through full command cycle (validate, plan, up, status, halt, destroy)
+- [x] T119 [P] Run lint and fix any issues
+- [x] T120 [P] Run test coverage and ensure >80% on config/state/core modules
+- [x] T121 Create `npm pack` and verify package installs correctly
 
 **Verification**: `npm test` passes, lint clean, coverage met, package installs.
 

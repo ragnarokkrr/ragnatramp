@@ -1,0 +1,47 @@
+# Source files (compiled to dist/)
+src/
+
+# Source maps (not needed for published package)
+*.js.map
+
+# Tests
+tests/
+
+# Specs and documentation
+specs/
+.specify/
+.claude/
+
+# Development files
+*.ts
+!*.d.ts
+tsconfig.json
+eslint.config.js
+
+# Git and CI
+.git/
+.github/
+.gitignore
+
+# IDE
+.vscode/
+.idea/
+
+# Coverage
+coverage/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Local config
+*.local.*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temp files
+*.tmp
+*.swp
+nul
