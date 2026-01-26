@@ -212,14 +212,14 @@
 
 ### Implementation
 
-- [ ] T074 [US2] Register `validate` command in `src/cli/index.ts`
-- [ ] T075 [US2] Create `src/cli/commands/validate.ts` with validateCommand handler: load, validate schema, output result
-- [ ] T076 [US2] Format validation errors with field path, expected type, actual value
-- [ ] T077 [US2] Add optional base image existence warning (non-blocking)
+- [x] T074 [US2] Register `validate` command in `src/cli/index.ts`
+- [x] T075 [US2] Create `src/cli/commands/validate.ts` with validateCommand handler: load, validate schema, output result
+- [x] T076 [US2] Format validation errors with field path, expected type, actual value
+- [x] T077 [US2] Add optional base image existence warning (non-blocking)
 
 ### Tests
 
-- [ ] T078 [P] [US2] Create `tests/integration/validate.test.ts` with tests: valid config exits 0, invalid exits 1 with errors
+- [x] T078 [P] [US2] Create `tests/integration/validate.test.ts` with tests: valid config exits 0, invalid exits 1 with errors
 
 **Verification**: `ragnatramp validate` correctly validates all fixture configs.
 

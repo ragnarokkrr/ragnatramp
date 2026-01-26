@@ -5,6 +5,7 @@ import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 
 import { upCommand } from './commands/up.js';
+import { validateCommand } from './commands/validate.js';
 
 // Get version from package.json
 const __filename = fileURLToPath(import.meta.url);
@@ -24,10 +25,7 @@ program
   .command('validate <file>')
   .description('Validate YAML configuration against schema')
   .option('--json', 'Output as JSON')
-  .action((_file: string, _options: { json?: boolean }) => {
-    console.log('validate command not yet implemented');
-    process.exit(1);
-  });
+  .action(validateCommand);
 
 program
   .command('plan <file>')
