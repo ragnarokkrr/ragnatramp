@@ -152,6 +152,12 @@ VMs are named using the pattern `{project}-{machine}-{hash8}` where the hash is 
 | 1 | User/configuration error |
 | 2 | Hyper-V/system error |
 
+## Documentation
+
+- [Quickstart Guide](./docs/quickstart.md) - Get started quickly
+- [Configuration Reference](./docs/config-reference.md) - All YAML options
+- [Command Reference](./docs/commands.md) - Detailed command documentation
+
 ## Development
 
 ```bash

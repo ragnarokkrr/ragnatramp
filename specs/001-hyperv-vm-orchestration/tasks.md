@@ -352,10 +352,10 @@
 
 **Purpose**: Create quickstart guide, config reference, and command reference
 
-- [ ] T110 [P] Create `docs/quickstart.md` based on `specs/001-hyperv-vm-orchestration/quickstart.md` (copy and verify)
-- [ ] T111 [P] Create `docs/config-reference.md` documenting all YAML fields, types, defaults, examples
-- [ ] T112 [P] Create `docs/commands.md` documenting all commands, options, exit codes, examples
-- [ ] T113 Update `README.md` with project description, installation, basic usage, links to docs
+- [x] T110 [P] Create `docs/quickstart.md` based on `specs/001-hyperv-vm-orchestration/quickstart.md` (copy and verify)
+- [x] T111 [P] Create `docs/config-reference.md` documenting all YAML fields, types, defaults, examples
+- [x] T112 [P] Create `docs/commands.md` documenting all commands, options, exit codes, examples
+- [x] T113 Update `README.md` with project description, installation, basic usage, links to docs
 
 **Verification**: All documented commands work as described. Examples copy-paste correctly.
 
