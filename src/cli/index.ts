@@ -6,6 +6,7 @@ import { dirname, join } from 'path';
 
 import { upCommand } from './commands/up.js';
 import { validateCommand } from './commands/validate.js';
+import { planCommand } from './commands/plan.js';
 
 // Get version from package.json
 const __filename = fileURLToPath(import.meta.url);
@@ -31,10 +32,7 @@ program
   .command('plan <file>')
   .description('Show intended actions without executing')
   .option('--json', 'Output as JSON')
-  .action((_file: string, _options: { json?: boolean }) => {
-    console.log('plan command not yet implemented');
-    process.exit(1);
-  });
+  .action(planCommand);
 
 program
   .command('up <file>')

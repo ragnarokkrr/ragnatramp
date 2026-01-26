@@ -235,14 +235,14 @@
 
 ### Implementation
 
-- [ ] T079 [US3] Register `plan` command in `src/cli/index.ts`
-- [ ] T080 [US3] Create `src/cli/commands/plan.ts` with planCommand handler: load, validate, query state, compute plan, display
-- [ ] T081 [US3] Format plan output: + for create, ~ for modify, showing CPU/memory/disk details
-- [ ] T082 [US3] Ensure plan makes NO Hyper-V modifications (read-only queries only)
+- [x] T079 [US3] Register `plan` command in `src/cli/index.ts`
+- [x] T080 [US3] Create `src/cli/commands/plan.ts` with planCommand handler: load, validate, query state, compute plan, display
+- [x] T081 [US3] Format plan output: + for create, ~ for modify, showing CPU/memory/disk details
+- [x] T082 [US3] Ensure plan makes NO Hyper-V modifications (read-only queries only)
 
 ### Tests
 
-- [ ] T083 [P] [US3] Create `tests/integration/plan.test.ts` with tests: shows create for new VMs, shows "no changes" when converged
+- [x] T083 [P] [US3] Create `tests/integration/plan.test.ts` with tests: shows create for new VMs, shows "no changes" when converged
 
 **Verification**: `ragnatramp plan` accurately previews without side effects.
 
