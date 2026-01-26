@@ -10,6 +10,8 @@ import { planCommand } from './commands/plan.js';
 import { statusCommand } from './commands/status.js';
 import { haltCommand } from './commands/halt.js';
 import { destroyCommand } from './commands/destroy.js';
+import { checkpointCommand } from './commands/checkpoint.js';
+import { restoreCommand } from './commands/restore.js';
 
 // Get version from package.json
 const __filename = fileURLToPath(import.meta.url);
@@ -68,19 +70,13 @@ program
   .description('Create checkpoint for managed VMs')
   .requiredOption('--name <name>', 'Checkpoint name')
   .option('--json', 'Output as JSON')
-  .action((_file: string, _options: { name: string; json?: boolean }) => {
-    console.log('checkpoint command not yet implemented');
-    process.exit(1);
-  });
+  .action(checkpointCommand);
 
 program
   .command('restore <file>')
   .description('Restore managed VMs from checkpoint')
   .requiredOption('--name <name>', 'Checkpoint name')
   .option('--json', 'Output as JSON')
-  .action((_file: string, _options: { name: string; json?: boolean }) => {
-    console.log('restore command not yet implemented');
-    process.exit(1);
-  });
+  .action(restoreCommand);
 
 program.parse();

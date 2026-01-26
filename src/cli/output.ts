@@ -525,12 +525,14 @@ export class OutputFormatter {
   /**
    * Print final summary.
    */
-  summary(stats: { created?: number; started?: number; stopped?: number; destroyed?: number }): void {
+  summary(stats: { created?: number; started?: number; stopped?: number; destroyed?: number; checkpointed?: number; restored?: number }): void {
     const parts: string[] = [];
     if (stats.created) parts.push(`${stats.created} created`);
     if (stats.started) parts.push(`${stats.started} started`);
     if (stats.stopped) parts.push(`${stats.stopped} stopped`);
     if (stats.destroyed) parts.push(`${stats.destroyed} destroyed`);
+    if (stats.checkpointed) parts.push(`${stats.checkpointed} checkpointed`);
+    if (stats.restored) parts.push(`${stats.restored} restored`);
 
     if (this.mode === 'human') {
       this.newline();

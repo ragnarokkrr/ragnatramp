@@ -143,6 +143,22 @@ export class PreflightError extends RagnatrampError {
 }
 
 /**
+ * Error for checkpoint-related issues.
+ */
+export class CheckpointError extends RagnatrampError {
+  constructor(
+    message: string,
+    suggestion?: string,
+    public readonly checkpointName?: string,
+    public readonly vmName?: string
+  ) {
+    super(message, 'CHECKPOINT_NOT_FOUND', suggestion);
+    this.name = 'CheckpointError';
+    Object.setPrototypeOf(this, CheckpointError.prototype);
+  }
+}
+
+/**
  * Error for ownership verification failures.
  */
 export class OwnershipError extends RagnatrampError {

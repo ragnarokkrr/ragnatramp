@@ -331,16 +331,16 @@
 
 ### Implementation
 
-- [ ] T103 [US7] Register `checkpoint` command in `src/cli/index.ts` with `--name` required option
-- [ ] T104 [US7] Create `src/cli/commands/checkpoint.ts` with checkpointCommand handler: create checkpoint for each VM
-- [ ] T105 [US7] Track checkpoints in state file
-- [ ] T106 [US7] Register `restore` command in `src/cli/index.ts` with `--name` required option
-- [ ] T107 [US7] Create `src/cli/commands/restore.ts` with restoreCommand handler: stop VMs, restore snapshot
-- [ ] T108 [US7] Validate checkpoint exists before restore, clear error if not found
+- [x] T103 [US7] Register `checkpoint` command in `src/cli/index.ts` with `--name` required option
+- [x] T104 [US7] Create `src/cli/commands/checkpoint.ts` with checkpointCommand handler: create checkpoint for each VM
+- [x] T105 [US7] Track checkpoints in state file
+- [x] T106 [US7] Register `restore` command in `src/cli/index.ts` with `--name` required option
+- [x] T107 [US7] Create `src/cli/commands/restore.ts` with restoreCommand handler: stop VMs, restore snapshot
+- [x] T108 [US7] Validate checkpoint exists before restore, clear error if not found
 
 ### Tests
 
-- [ ] T109 [P] [US7] Create `tests/integration/checkpoint.test.ts` with tests: creates checkpoint, restores checkpoint
+- [x] T109 [P] [US7] Create `tests/integration/checkpoint.test.ts` with tests: creates checkpoint, restores checkpoint
 
 **Verification**: Checkpoints created and restored successfully.
 
