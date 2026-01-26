@@ -187,16 +187,16 @@
 
 ### Implementation
 
-- [ ] T067 [US1] Register `up` command in `src/cli/index.ts` with `<file>` argument and `--json` option
-- [ ] T068 [US1] Create `src/cli/commands/up.ts` with upCommand handler: load config, validate, preflight, plan, reconcile, output
-- [ ] T069 [US1] Wire up executor, state manager, planner, reconciler in up command
-- [ ] T070 [US1] Add progress output showing each VM being created/started
-- [ ] T071 [US1] Handle idempotency: skip create if VM exists in state and Hyper-V
+- [x] T067 [US1] Register `up` command in `src/cli/index.ts` with `<file>` argument and `--json` option
+- [x] T068 [US1] Create `src/cli/commands/up.ts` with upCommand handler: load config, validate, preflight, plan, reconcile, output
+- [x] T069 [US1] Wire up executor, state manager, planner, reconciler in up command
+- [x] T070 [US1] Add progress output showing each VM being created/started
+- [x] T071 [US1] Handle idempotency: skip create if VM exists in state and Hyper-V
 
 ### Tests
 
-- [ ] T072 [P] [US1] Create `tests/integration/up.test.ts` with mocked PowerShell: creates VMs when none exist
-- [ ] T073 [P] [US1] Create `tests/integration/up.test.ts` with test: idempotent re-run does nothing
+- [x] T072 [P] [US1] Create `tests/integration/up.test.ts` with mocked PowerShell: creates VMs when none exist
+- [x] T073 [P] [US1] Create `tests/integration/up.test.ts` with test: idempotent re-run does nothing
 
 **Verification**: `ragnatramp up` with mocked PowerShell creates expected VMs. Re-run is idempotent.
 
