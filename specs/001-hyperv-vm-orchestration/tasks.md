@@ -258,14 +258,14 @@
 
 ### Implementation
 
-- [ ] T084 [US4] Register `status` command in `src/cli/index.ts`
-- [ ] T085 [US4] Create `src/cli/commands/status.ts` with statusCommand handler: load state, query Hyper-V, format table
-- [ ] T086 [US4] Format status as table: NAME, STATE, CPU, MEMORY columns
-- [ ] T087 [US4] Handle case: VM in state but missing from Hyper-V (show "Missing")
+- [x] T084 [US4] Register `status` command in `src/cli/index.ts`
+- [x] T085 [US4] Create `src/cli/commands/status.ts` with statusCommand handler: load state, query Hyper-V, format table
+- [x] T086 [US4] Format status as table: NAME, STATE, CPU, MEMORY columns
+- [x] T087 [US4] Handle case: VM in state but missing from Hyper-V (show "Missing")
 
 ### Tests
 
-- [ ] T088 [P] [US4] Create `tests/integration/status.test.ts` with tests: shows running VMs, shows missing VMs
+- [x] T088 [P] [US4] Create `tests/integration/status.test.ts` with tests: shows running VMs, shows missing VMs
 
 **Verification**: `ragnatramp status` accurately reports VM states.
 

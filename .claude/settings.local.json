@@ -12,7 +12,8 @@
       "Bash(git commit:*)",
       "Bash(npm run lint)",
       "Bash(npm test)",
-      "Bash(node:*)"
+      "Bash(node:*)",
+      "Bash(npm test:*)"
     ]
   }
 }
