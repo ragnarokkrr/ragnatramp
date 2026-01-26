@@ -8,6 +8,7 @@ import { upCommand } from './commands/up.js';
 import { validateCommand } from './commands/validate.js';
 import { planCommand } from './commands/plan.js';
 import { statusCommand } from './commands/status.js';
+import { haltCommand } from './commands/halt.js';
 
 // Get version from package.json
 const __filename = fileURLToPath(import.meta.url);
@@ -52,10 +53,7 @@ program
   .description('Stop managed VMs')
   .option('--all', 'Stop all managed VMs')
   .option('--json', 'Output as JSON')
-  .action((_file: string, _machine: string | undefined, _options: { all?: boolean; json?: boolean }) => {
-    console.log('halt command not yet implemented');
-    process.exit(1);
-  });
+  .action(haltCommand);
 
 program
   .command('destroy <file> [machine]')

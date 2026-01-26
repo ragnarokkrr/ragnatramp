@@ -281,14 +281,14 @@
 
 ### Implementation
 
-- [ ] T089 [US5] Register `halt` command in `src/cli/index.ts` with optional `[machine]` and `--all` option
-- [ ] T090 [US5] Create `src/cli/commands/halt.ts` with haltCommand handler: validate machine name, stop VMs
-- [ ] T091 [US5] Implement graceful shutdown with force fallback after timeout
-- [ ] T092 [US5] Handle idempotency: skip already-stopped VMs
+- [x] T089 [US5] Register `halt` command in `src/cli/index.ts` with optional `[machine]` and `--all` option
+- [x] T090 [US5] Create `src/cli/commands/halt.ts` with haltCommand handler: validate machine name, stop VMs
+- [x] T091 [US5] Implement graceful shutdown with force fallback after timeout
+- [x] T092 [US5] Handle idempotency: skip already-stopped VMs
 
 ### Tests
 
-- [ ] T093 [P] [US5] Create `tests/integration/halt.test.ts` with tests: stops running VM, idempotent on stopped
+- [x] T093 [P] [US5] Create `tests/integration/halt.test.ts` with tests: stops running VM, idempotent on stopped
 
 **Verification**: `ragnatramp halt` stops VMs safely.
 

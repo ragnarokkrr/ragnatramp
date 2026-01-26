@@ -254,7 +254,8 @@ export class OutputFormatter {
    */
   actionComplete(action: Action): void {
     if (this.mode === 'human') {
-      console.log(`${this.getIndent()}✓ VM ${action.type === 'create' ? 'created' : action.type}${action.type === 'start' ? 'ed' : ''}`);
+      const pastTense = this.getActionPastTense(action.type);
+      console.log(`${this.getIndent()}✓ VM ${pastTense}`);
       if (action.type === 'create') {
         console.log(`${this.getIndent()}✓ VM started`);
       }
@@ -266,6 +267,26 @@ export class OutputFormatter {
       vm: action.vmName,
       status: 'completed',
     });
+  }
+
+  /**
+   * Get the past tense form of an action type.
+   */
+  private getActionPastTense(type: ActionType): string {
+    switch (type) {
+      case 'create':
+        return 'created';
+      case 'start':
+        return 'started';
+      case 'stop':
+        return 'stopped';
+      case 'destroy':
+        return 'destroyed';
+      case 'checkpoint':
+        return 'checkpointed';
+      case 'restore':
+        return 'restored';
+    }
   }
 
   /**
