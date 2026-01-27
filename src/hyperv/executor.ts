@@ -204,26 +204,50 @@ export class HyperVExecutor {
   }
 
   /**
+   * Strip ANSI escape codes and control characters from a string.
+   */
+  private stripAnsiCodes(str: string): string {
+    // Strip ANSI escape sequences (colors, cursor movement, etc.)
+    // eslint-disable-next-line no-control-regex
+    return str.replace(/\x1b\[[0-9;]*[a-zA-Z]/g, '')
+              .replace(/\r/g, ''); // Also strip carriage returns
+  }
+
+  /**
    * Format a user-friendly error message from stderr.
    */
   private formatErrorMessage(stderr: string, exitCode: number | null): string {
-    // Extract the most relevant error line
-    const lines = stderr.trim().split('\n');
+    // Strip ANSI codes and normalize line endings
+    const cleanStderr = this.stripAnsiCodes(stderr);
+    const lines = cleanStderr.trim().split('\n');
+
+    // Look for the most informative error line
+    // PowerShell often outputs errors like: "New-VM : Cannot create a file..."
     const errorLine = lines.find(
       (line) =>
         line.includes('Error') ||
         line.includes('Exception') ||
         line.includes('Cannot') ||
-        line.includes('Unable')
+        line.includes('Unable') ||
+        line.includes(' : ') // PowerShell cmdlet error format
     );
 
     if (errorLine) {
-      return errorLine.trim();
+      const trimmed = errorLine.trim();
+      // If the line is very short or looks truncated, try to provide more context
+      if (trimmed.length < 30 && lines.length > 1) {
+        // Join up to 3 lines for more context
+        return lines.slice(0, 3).map(l => l.trim()).filter(Boolean).join(' | ');
+      }
+      return trimmed;
     }
 
-    if (stderr.trim()) {
-      // Return first meaningful line
-      return lines[0]?.trim() ?? `PowerShell exited with code ${exitCode}`;
+    if (cleanStderr.trim()) {
+      // Return first meaningful line(s)
+      const meaningful = lines.filter(l => l.trim().length > 0).slice(0, 3);
+      if (meaningful.length > 0) {
+        return meaningful.map(l => l.trim()).join(' | ');
+      }
     }
 
     return `PowerShell exited with code ${exitCode}`;

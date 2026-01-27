@@ -170,13 +170,15 @@ export async function checkBaseImagesExist(
  * @param state - Current state file
  * @param actualVM - Actual VM from Hyper-V
  * @param configPath - Path to the config file
+ * @param projectName - Project name from config (used for name pattern check)
  * @returns Ownership verification result
  */
 export function verifyOwnership(
   vmName: string,
   state: StateFile | null,
   actualVM: HyperVVM | null,
-  configPath: string
+  configPath: string,
+  projectName?: string
 ): OwnershipResult {
   const absoluteConfigPath = resolve(configPath);
   const checks = {
@@ -198,12 +200,14 @@ export function verifyOwnership(
 
   // Check 3: Does the VM name match the expected pattern?
   // We need to find the machine name from state to verify
-  if (state) {
+  // Use projectName from config if provided, otherwise fall back to state.project
+  const effectiveProject = projectName ?? state?.project;
+  if (state && effectiveProject) {
     for (const [machineName, vmState] of Object.entries(state.vms)) {
       if (vmState.name === vmName) {
         checks.nameMatchesPattern = matchesExpectedName(
           vmName,
-          state.project,
+          effectiveProject,
           machineName,
           absoluteConfigPath
         );
@@ -270,7 +274,8 @@ export function verifyOwnershipByMachineName(
     stateEntry?.name ?? expectedVMName,
     state,
     actualVM,
-    configPath
+    configPath,
+    projectName
   );
 }
 

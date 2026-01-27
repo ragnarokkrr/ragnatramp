@@ -18,7 +18,7 @@ Ragna Tramp is a confined-environment, user-space CLI that emulates the core of 
 - **Windows 11 Pro** with Hyper-V enabled
 - **Hyper-V Administrators** group membership
 - **Node.js 20+** (nvm recommended)
-- **Golden VHDX image** - a pre-built, bootable Gen2 VM disk
+- **Golden VHDX image** - a pre-built, bootable VM disk (see [Base Image Requirements](#base-image-requirements))
 
 ## Installation
 
@@ -181,6 +181,24 @@ npm test
 npm run lint
 ```
 
+## Base Image Requirements
+
+Ragna Tramp creates **Generation 1** Hyper-V VMs for maximum compatibility with various disk images. Your golden VHDX must be:
+
+- **Bootable with BIOS** - Gen1 VMs use legacy BIOS boot, not UEFI
+- **MBR or GPT partitioned** - Both work with Gen1 VMs
+- **IDE-compatible boot** - Gen1 VMs boot from IDE controllers
+
+Most Linux distributions and Windows images work out of the box. If you have a Gen2-only image (UEFI-only boot), you'll need to convert it or use a different base image.
+
+### Creating a Golden Image
+
+1. Create a new Gen1 VM in Hyper-V Manager
+2. Install your OS and configure it as desired
+3. Generalize the image (e.g., `sysprep` for Windows, `cloud-init` for Linux)
+4. Copy the VHDX to your golden images location
+5. Reference it in your `ragnatramp.yaml` as `base_image`
+
 ## Troubleshooting
 
 ### "Hyper-V not available"
@@ -201,6 +219,15 @@ Add-LocalGroupMember -Group "Hyper-V Administrators" -Member $env:USERNAME
 ### "Default Switch not found"
 
 The Default Switch should exist by default with Hyper-V. Verify in Hyper-V Manager or Virtual Switch Manager.
+
+### VM boots to black screen or "Boot device not found"
+
+Your base image may not be compatible with Generation 1 VMs. Common causes:
+- **UEFI-only image** - The image was created for Gen2 VMs (UEFI boot only)
+- **GPT without legacy boot** - Some GPT-partitioned disks don't have a BIOS boot partition
+- **Corrupted bootloader** - The MBR or bootloader is damaged
+
+**Solution**: Create a new golden image using a Gen1 VM in Hyper-V Manager, or use a known Gen1-compatible image.
 
 ## License
 

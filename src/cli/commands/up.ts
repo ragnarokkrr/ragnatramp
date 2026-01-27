@@ -16,6 +16,7 @@ import { StateManager } from '../../state/manager.js';
 import { computePlan, hasActions } from '../../core/planner.js';
 import { executeActions } from '../../core/reconciler.js';
 import { runPreflightChecks, assertPreflightPassed } from '../../core/preflight.js';
+import { generateVMName } from '../../core/naming.js';
 import { RagnatrampError, ConfigError, isRagnatrampError, getExitCode } from '../../core/errors.js';
 import { OutputFormatter, createOutput } from '../output.js';
 import type { Action } from '../../core/types.js';
@@ -165,10 +166,7 @@ function countRunningVMs(
   config: import('../../config/types.js').ResolvedConfig
 ): number {
   const vmNames = new Set(
-    config.machines.map((m) => {
-      const { generateVMName } = require('../../core/naming.js');
-      return generateVMName(config.project.name, m.name, config.configPath);
-    })
+    config.machines.map((m) => generateVMName(config.project.name, m.name, config.configPath))
   );
 
   return actualVMs.filter(

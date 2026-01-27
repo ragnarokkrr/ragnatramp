@@ -183,6 +183,7 @@ async function executeCreateAction(
     diskPath: details.diskPath,
     notes: details.notes,
     differencing: details.differencing,
+    autoStart: details.autoStart,
   });
 
   const result = await executor.execute<CreateVMResult>(script);

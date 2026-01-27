@@ -344,13 +344,16 @@ export class OutputFormatter {
    * Print a table of data.
    *
    * @param headers - Column headers
-   * @param rows - Row data
+   * @param rows - Row data (cells are converted to strings)
    */
-  table(headers: string[], rows: string[][]): void {
+  table(headers: string[], rows: unknown[][]): void {
     if (this.mode === 'human') {
+      // Convert all cells to strings
+      const stringRows = rows.map((row) => row.map((cell) => String(cell ?? '')));
+
       // Calculate column widths
       const widths = headers.map((h, i) => {
-        const maxRowWidth = Math.max(...rows.map((r) => (r[i] ?? '').length));
+        const maxRowWidth = Math.max(...stringRows.map((r) => (r[i] ?? '').length));
         return Math.max(h.length, maxRowWidth);
       });
 
@@ -359,7 +362,7 @@ export class OutputFormatter {
       console.log(`${this.getIndent()}${headerLine}`);
 
       // Print rows
-      for (const row of rows) {
+      for (const row of stringRows) {
         const rowLine = row.map((cell, i) => (cell ?? '').padEnd(widths[i] ?? 0)).join('  ');
         console.log(`${this.getIndent()}${rowLine}`);
       }

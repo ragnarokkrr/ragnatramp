@@ -71,6 +71,8 @@ export interface CreateVMParams {
   notes: string;
   /** Whether to use differencing disk */
   differencing: boolean;
+  /** Whether to auto-start VM after creation (default: true) */
+  autoStart?: boolean;
 }
 
 /**

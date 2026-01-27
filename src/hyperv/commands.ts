@@ -22,7 +22,8 @@ export function escapePowerShellString(value: string): string {
  */
 export function buildGetVMsScript(): string {
   return `
-$vms = Get-VM | Select-Object Id, Name, State, Notes,
+$vms = Get-VM | Select-Object Id, Name, Notes,
+  @{N='State';E={$_.State.ToString()}},
   @{N='MemoryMB';E={[math]::Round($_.MemoryStartup/1MB)}},
   @{N='CPUCount';E={$_.ProcessorCount}}
 if ($vms -eq $null) { '[]' } elseif ($vms -is [array]) { $vms | ConvertTo-Json -Depth 3 } else { ConvertTo-Json @($vms) -Depth 3 }
@@ -38,7 +39,8 @@ if ($vms -eq $null) { '[]' } elseif ($vms -is [array]) { $vms | ConvertTo-Json -
 export function buildGetVMByNameScript(name: string): string {
   const safeName = escapePowerShellString(name);
   return `
-$vm = Get-VM -Name '${safeName}' -ErrorAction SilentlyContinue | Select-Object Id, Name, State, Notes,
+$vm = Get-VM -Name '${safeName}' -ErrorAction SilentlyContinue | Select-Object Id, Name, Notes,
+  @{N='State';E={$_.State.ToString()}},
   @{N='MemoryMB';E={[math]::Round($_.MemoryStartup/1MB)}},
   @{N='CPUCount';E={$_.ProcessorCount}}
 if ($vm) { $vm | ConvertTo-Json -Depth 3 } else { 'null' }
@@ -54,7 +56,8 @@ if ($vm) { $vm | ConvertTo-Json -Depth 3 } else { 'null' }
 export function buildGetVMByIdScript(id: string): string {
   const safeId = escapePowerShellString(id);
   return `
-$vm = Get-VM -Id '${safeId}' -ErrorAction SilentlyContinue | Select-Object Id, Name, State, Notes,
+$vm = Get-VM -Id '${safeId}' -ErrorAction SilentlyContinue | Select-Object Id, Name, Notes,
+  @{N='State';E={$_.State.ToString()}},
   @{N='MemoryMB';E={[math]::Round($_.MemoryStartup/1MB)}},
   @{N='CPUCount';E={$_.ProcessorCount}}
 if ($vm) { $vm | ConvertTo-Json -Depth 3 } else { 'null' }
@@ -72,10 +75,13 @@ export function buildCreateVMScript(params: CreateVMParams): string {
   const safeBaseImage = escapePowerShellString(params.baseImage);
   const safeDiskPath = escapePowerShellString(params.diskPath);
   const safeNotes = escapePowerShellString(params.notes);
+  const autoStart = params.autoStart !== false; // Default to true
 
   const diskCreation = params.differencing
     ? `New-VHD -Path '${safeDiskPath}' -ParentPath '${safeBaseImage}' -Differencing | Out-Null`
     : `Copy-Item -Path '${safeBaseImage}' -Destination '${safeDiskPath}' -Force`;
+
+  const startCommand = autoStart ? `\nStart-VM -VM $vm` : '';
 
   return `
 $ErrorActionPreference = 'Stop'
@@ -84,12 +90,12 @@ $diskDir = Split-Path -Parent '${safeDiskPath}'
 if (-not (Test-Path $diskDir)) { New-Item -ItemType Directory -Path $diskDir -Force | Out-Null }
 # Create disk
 ${diskCreation}
-# Create VM
-$vm = New-VM -Name '${safeName}' -Generation 2 -MemoryStartupBytes ${params.memoryMB}MB -NoVHD
-Set-VM -VM $vm -ProcessorCount ${params.cpu}
-Add-VMHardDiskDrive -VM $vm -Path '${safeDiskPath}'
-Connect-VMNetworkAdapter -VM $vm -SwitchName 'Default Switch'
-Set-VM -VM $vm -Notes '${safeNotes}'
+# Create VM (Gen1 for broader compatibility with various disk images)
+$vm = New-VM -Name '${safeName}' -Generation 1 -MemoryStartupBytes ${params.memoryMB}MB -NoVHD
+Set-VM -VMName $vm.Name -ProcessorCount ${params.cpu}
+Add-VMHardDiskDrive -VMName $vm.Name -Path '${safeDiskPath}'
+Connect-VMNetworkAdapter -VMName $vm.Name -SwitchName 'Default Switch'
+Set-VM -VMName $vm.Name -Notes '${safeNotes}'${startCommand}
 $vm | Select-Object Id, Name | ConvertTo-Json
 `.trim();
 }
@@ -121,7 +127,8 @@ export function buildStopVMScript(vmId: string, force: boolean = false): string 
   // For graceful: use Stop-VM without -TurnOff, then timeout and force
   return `
 $ErrorActionPreference = 'Stop'
-Stop-VM -Id '${safeId}'${forceFlag}
+$vm = Get-VM -Id '${safeId}'
+Stop-VM -VM $vm${forceFlag}
 'null'
 `.trim();
 }
@@ -138,7 +145,7 @@ export function buildGracefulStopVMScript(vmId: string, timeoutSeconds: number =
 $ErrorActionPreference = 'Stop'
 $vm = Get-VM -Id '${safeId}'
 if ($vm.State -eq 'Running') {
-  Stop-VM -Id '${safeId}' -Force:$false -ErrorAction SilentlyContinue
+  Stop-VM -VM $vm -Force:$false -ErrorAction SilentlyContinue
   $waited = 0
   while ($waited -lt ${timeoutSeconds}) {
     Start-Sleep -Seconds 1
@@ -147,7 +154,7 @@ if ($vm.State -eq 'Running') {
     if ($vm.State -ne 'Running') { break }
   }
   if ($vm.State -eq 'Running') {
-    Stop-VM -Id '${safeId}' -TurnOff
+    Stop-VM -VM $vm -TurnOff
   }
 }
 'null'
@@ -165,8 +172,8 @@ export function buildRemoveVMScript(vmId: string): string {
 $ErrorActionPreference = 'Stop'
 $vm = Get-VM -Id '${safeId}' -ErrorAction SilentlyContinue
 if ($vm) {
-  if ($vm.State -eq 'Running') { Stop-VM -Id '${safeId}' -TurnOff }
-  Remove-VM -Id '${safeId}' -Force
+  if ($vm.State -eq 'Running') { Stop-VM -VM $vm -TurnOff }
+  Remove-VM -VM $vm -Force
 }
 'null'
 `.trim();
@@ -200,7 +207,7 @@ export function buildRestoreVMSnapshotScript(vmId: string, snapshotId: string): 
   return `
 $ErrorActionPreference = 'Stop'
 $vm = Get-VM -Id '${safeVmId}'
-if ($vm.State -eq 'Running') { Stop-VM -Id '${safeVmId}' -TurnOff }
+if ($vm.State -eq 'Running') { Stop-VM -VM $vm -TurnOff }
 $snapshot = Get-VMSnapshot -VMId '${safeVmId}' | Where-Object { $_.Id -eq '${safeSnapshotId}' }
 if (-not $snapshot) { throw "Snapshot not found: ${safeSnapshotId}" }
 Restore-VMSnapshot -VMSnapshot $snapshot -Confirm:$false

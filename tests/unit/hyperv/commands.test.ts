@@ -130,9 +130,9 @@ describe('buildCreateVMScript', () => {
     assert.ok(script.includes("'test-vm'"));
   });
 
-  it('should set Generation 2', () => {
+  it('should set Generation 1 for broader compatibility', () => {
     const script = buildCreateVMScript(baseParams);
-    assert.ok(script.includes('-Generation 2'));
+    assert.ok(script.includes('-Generation 1'));
   });
 
   it('should set memory in bytes', () => {

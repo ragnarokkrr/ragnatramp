@@ -57,6 +57,8 @@ export interface CreateActionDetails {
   differencing: boolean;
   /** VM Notes content */
   notes: string;
+  /** Whether to auto-start VM after creation (default: true) */
+  autoStart: boolean;
 }
 
 /**

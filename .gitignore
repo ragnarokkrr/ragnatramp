@@ -11,6 +11,7 @@ dist/
 build/
 out/
 *.tsbuildinfo
+tmp/
 
 # Environment / secrets
 .env

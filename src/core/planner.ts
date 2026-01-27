@@ -141,14 +141,14 @@ function computeMachineAction(
 ): Action | null {
   // Case 1: VM doesn't exist anywhere - create it
   if (!stateEntry && !actualVM) {
-    return createCreateAction(config, machine, vmName);
+    return createCreateAction(config, machine, vmName, autoStart);
   }
 
   // Case 2: VM in state but not in Hyper-V - orphaned state, recreate
   if (stateEntry && !actualVM) {
     // The state references a VM that no longer exists
     // We'll create a new one (the state will be updated after creation)
-    return createCreateAction(config, machine, vmName);
+    return createCreateAction(config, machine, vmName, autoStart);
   }
 
   // Case 3: VM exists in Hyper-V but not in state - this is unexpected
@@ -178,7 +178,8 @@ function computeMachineAction(
 function createCreateAction(
   config: ResolvedConfig,
   machine: ResolvedMachine,
-  vmName: string
+  vmName: string,
+  autoStart: boolean = true
 ): Action {
   const diskPath = join(config.artifactPath, `${machine.name}.vhdx`);
   const notes = generateVMNotes(config.configPath);
@@ -191,6 +192,7 @@ function createCreateAction(
     diskPath,
     differencing: machine.diskStrategy === 'differencing',
     notes,
+    autoStart,
   };
 
   return {
