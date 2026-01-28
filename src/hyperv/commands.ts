@@ -109,7 +109,8 @@ export function buildStartVMScript(vmId: string): string {
   const safeId = escapePowerShellString(vmId);
   return `
 $ErrorActionPreference = 'Stop'
-Start-VM -Id '${safeId}'
+$vm = Get-VM -Id '${safeId}'
+Start-VM -VM $vm
 'null'
 `.trim();
 }
@@ -190,7 +191,8 @@ export function buildCheckpointVMScript(params: CreateCheckpointParams): string 
   const safeName = escapePowerShellString(params.name);
   return `
 $ErrorActionPreference = 'Stop'
-$checkpoint = Checkpoint-VM -Id '${safeVmId}' -SnapshotName '${safeName}' -Passthru
+$vm = Get-VM -Id '${safeVmId}'
+$checkpoint = Checkpoint-VM -VM $vm -SnapshotName '${safeName}' -Passthru
 $checkpoint | Select-Object Id, Name, VMId | ConvertTo-Json
 `.trim();
 }
@@ -208,7 +210,7 @@ export function buildRestoreVMSnapshotScript(vmId: string, snapshotId: string): 
 $ErrorActionPreference = 'Stop'
 $vm = Get-VM -Id '${safeVmId}'
 if ($vm.State -eq 'Running') { Stop-VM -VM $vm -TurnOff }
-$snapshot = Get-VMSnapshot -VMId '${safeVmId}' | Where-Object { $_.Id -eq '${safeSnapshotId}' }
+$snapshot = Get-VMSnapshot -VMName $vm.Name | Where-Object { $_.Id -eq '${safeSnapshotId}' }
 if (-not $snapshot) { throw "Snapshot not found: ${safeSnapshotId}" }
 Restore-VMSnapshot -VMSnapshot $snapshot -Confirm:$false
 'null'
@@ -224,7 +226,9 @@ Restore-VMSnapshot -VMSnapshot $snapshot -Confirm:$false
 export function buildGetVMSnapshotsScript(vmId: string): string {
   const safeVmId = escapePowerShellString(vmId);
   return `
-$snapshots = Get-VMSnapshot -VMId '${safeVmId}' -ErrorAction SilentlyContinue | Select-Object Id, Name, VMId, VMName, CreationTime
+$vm = Get-VM -Id '${safeVmId}' -ErrorAction SilentlyContinue
+if (-not $vm) { '[]'; return }
+$snapshots = Get-VMSnapshot -VMName $vm.Name -ErrorAction SilentlyContinue | Select-Object Id, Name, VMId, VMName, CreationTime
 if ($snapshots -eq $null) { '[]' } elseif ($snapshots -is [array]) { $snapshots | ConvertTo-Json -Depth 3 } else { ConvertTo-Json @($snapshots) -Depth 3 }
 `.trim();
 }
@@ -240,7 +244,8 @@ export function buildRemoveVMSnapshotScript(vmId: string, snapshotId: string): s
   const safeSnapshotId = escapePowerShellString(snapshotId);
   return `
 $ErrorActionPreference = 'Stop'
-$snapshot = Get-VMSnapshot -VMId '${safeVmId}' | Where-Object { $_.Id -eq '${safeSnapshotId}' }
+$vm = Get-VM -Id '${safeVmId}'
+$snapshot = Get-VMSnapshot -VMName $vm.Name | Where-Object { $_.Id -eq '${safeSnapshotId}' }
 if ($snapshot) { Remove-VMSnapshot -VMSnapshot $snapshot -Confirm:$false }
 'null'
 `.trim();

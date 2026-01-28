@@ -329,10 +329,10 @@ describe('buildGetVMSnapshotsScript', () => {
     assert.ok(script.includes('Get-VMSnapshot'));
   });
 
-  it('should query by VM ID', () => {
+  it('should get VM by ID then query snapshots by name', () => {
     const script = buildGetVMSnapshotsScript('test-id');
-    assert.ok(script.includes('-VMId'));
-    assert.ok(script.includes("'test-id'"));
+    assert.ok(script.includes("Get-VM -Id 'test-id'"));
+    assert.ok(script.includes('-VMName $vm.Name'));
   });
 
   it('should select required properties', () => {
