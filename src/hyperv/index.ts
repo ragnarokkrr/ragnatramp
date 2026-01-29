@@ -8,3 +8,4 @@ export * from './types.js';
 export * from './executor.js';
 export * from './commands.js';
 export * from './queries.js';
+export * from './verbose.js';
