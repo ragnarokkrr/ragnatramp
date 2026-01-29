@@ -49,12 +49,12 @@
 
 **CRITICAL**: No user story work can begin until this phase is complete.
 
-- [ ] T003 Refactor `HyperVExecutor` constructor in `src/hyperv/executor.ts` to accept an options object
+- [x] T003 Refactor `HyperVExecutor` constructor in `src/hyperv/executor.ts` to accept an options object
   - Change constructor from `constructor(powershellPath: string = 'powershell.exe')` to `constructor(options?: { powershellPath?: string; verbose?: boolean })`
   - Store `verbose` as `private readonly verbose: boolean` (default `false`)
   - Store `powershellPath` as before (default `'powershell.exe'`)
   - Preserve backward compatibility: if a plain string is passed, treat it as `powershellPath` (OPTIONAL — may break existing callers; prefer options-only if all callers are updated in T005–T012)
-- [ ] T004 Add verbose print logic to `execute()` method in `src/hyperv/executor.ts`
+- [x] T004 Add verbose print logic to `execute()` method in `src/hyperv/executor.ts`
   - At the top of `execute()`, before the `spawn()` call, add:
     ```
     if (this.verbose) {

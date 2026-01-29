@@ -6,6 +6,8 @@
 
 import { spawn } from 'node:child_process';
 
+import { formatCommand, supportsAnsi } from './verbose.js';
+
 /**
  * Error codes for Hyper-V operations
  */
@@ -41,13 +43,25 @@ export interface ExecuteOptions {
 }
 
 /**
+ * Options for constructing a HyperVExecutor
+ */
+export interface HyperVExecutorOptions {
+  /** Path to PowerShell executable (default: 'powershell.exe') */
+  powershellPath?: string;
+  /** Print commands to stderr before execution (default: false) */
+  verbose?: boolean;
+}
+
+/**
  * Executes Hyper-V cmdlets via PowerShell and parses JSON responses.
  */
 export class HyperVExecutor {
   private readonly powershellPath: string;
+  private readonly verbose: boolean;
 
-  constructor(powershellPath: string = 'powershell.exe') {
-    this.powershellPath = powershellPath;
+  constructor(options?: HyperVExecutorOptions) {
+    this.powershellPath = options?.powershellPath ?? 'powershell.exe';
+    this.verbose = options?.verbose ?? false;
   }
 
   /**
@@ -60,6 +74,11 @@ export class HyperVExecutor {
    */
   async execute<T>(script: string, options: ExecuteOptions = {}): Promise<T> {
     const { timeout = 30000 } = options;
+
+    if (this.verbose) {
+      const formatted = formatCommand(script, supportsAnsi());
+      process.stderr.write(formatted);
+    }
 
     return new Promise<T>((resolve, reject) => {
       const ps = spawn(this.powershellPath, [

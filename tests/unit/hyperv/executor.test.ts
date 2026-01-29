@@ -76,7 +76,12 @@ describe('HyperVExecutor', () => {
     });
 
     it('should accept custom PowerShell path', () => {
-      const executor = new HyperVExecutor('pwsh.exe');
+      const executor = new HyperVExecutor({ powershellPath: 'pwsh.exe' });
+      assert.ok(executor instanceof HyperVExecutor);
+    });
+
+    it('should accept verbose option', () => {
+      const executor = new HyperVExecutor({ verbose: true });
       assert.ok(executor instanceof HyperVExecutor);
     });
   });
