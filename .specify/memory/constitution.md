@@ -1,24 +1,16 @@
 <!--
 Sync Impact Report
 ==================
-Version change: (new) → 1.0.0
+Version change: 1.0.0 → 1.1.0
+Modified principles: None
 Added principles:
-  - I. User-Space Only
-  - II. Safety First
-  - III. Idempotent Operations
-  - IV. Deterministic Naming & Tagging
-  - V. Declarative YAML Only
-  - VI. Audit-Friendly Output
-  - VII. Predictable Failures
-  - VIII. Explicit State Management
-Added sections:
-  - Non-Goals (MVP)
-  - Quality Bar
-  - Governance
+  - IX. Explicit CLI Behavior
+Removed sections: None
 Templates status:
   - .specify/templates/plan-template.md ✅ (no changes needed - Constitution Check section already generic)
   - .specify/templates/spec-template.md ✅ (no changes needed - generic user story format)
   - .specify/templates/tasks-template.md ✅ (no changes needed - generic task format)
+  - .specify/templates/commands/ — no command files present; no updates needed
 Follow-up TODOs: None
 -->
 
@@ -117,6 +109,19 @@ All state MUST be stored in `.ragnatramp/` directory, never in registry or hidde
 
 **Rationale**: Explicit state enables debugging, backup, and prevents "magic" behavior. Registry-based state is fragile and opaque.
 
+### IX. Explicit CLI Behavior
+
+Logging is explicit and boring. CLI flags MUST have a single, well-defined effect. Output styling MUST NOT change functional output.
+
+- MUST NOT use hidden global flags or implicit configuration that alters behavior silently
+- Each CLI flag MUST do exactly one thing; no flag may have conditional or context-dependent side effects
+- Logging MUST be straightforward and predictable—no "smart" log levels that change based on undocumented heuristics
+- Output styling (colors, spinners, icons) MUST be cosmetic only; removing all styling MUST produce identical functional content
+- MUST NOT couple logging verbosity to unrelated behavioral changes (e.g., `--verbose` MUST NOT enable retry logic or change execution paths)
+- Styled output MUST degrade gracefully in non-TTY environments (pipes, redirects) without losing information
+
+**Rationale**: CLI tools that overload flags or hide behavior behind styling create unpredictable user experiences. Boring, explicit logging and single-purpose flags make the tool trustworthy and scriptable.
+
 ## Non-Goals (MVP)
 
 The following are explicitly OUT OF SCOPE for MVP to prevent scope creep:
@@ -168,4 +173,4 @@ The following are explicitly OUT OF SCOPE for MVP to prevent scope creep:
 - Complexity additions MUST be justified against Non-Goals; default answer is "not in MVP"
 - Version changes follow semantic versioning: MAJOR (breaking), MINOR (features), PATCH (fixes)
 
-**Version**: 1.0.0 | **Ratified**: 2026-01-19 | **Last Amended**: 2026-01-19
+**Version**: 1.1.0 | **Ratified**: 2026-01-19 | **Last Amended**: 2026-01-29
