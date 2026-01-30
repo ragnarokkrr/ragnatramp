@@ -19,11 +19,17 @@ The reconcile step also runs automatically during `ragnatramp up`.
 # Discover IPs and sync hosts
 ragnatramp reconcile ragnatramp.yaml
 
+# Preview what reconcile would do (no writes, no guest changes)
+ragnatramp reconcile ragnatramp.yaml --dry-run
+
 # With verbose PowerShell output
 ragnatramp reconcile ragnatramp.yaml --verbose
 
 # Machine-readable output
 ragnatramp reconcile ragnatramp.yaml --json
+
+# Dry-run with JSON output
+ragnatramp reconcile ragnatramp.yaml --dry-run --json
 ```
 
 ### Automatic (via up)
@@ -77,6 +83,8 @@ ragnatramp status ragnatramp.yaml
 4. **PowerShell Direct**: Guest writes use `Invoke-Command -VMName` over VMBus. No SSH needed.
 
 5. **Backward-compatible state**: The `network` field is optional. Old state files work without migration.
+
+6. **Dry-run mode**: `--dry-run` performs discovery and diff without writing state or contacting guests. Shows discovered IPs, state changes, and the rendered hosts block.
 
 ## Prerequisites for Guest VMs
 

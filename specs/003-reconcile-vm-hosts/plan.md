@@ -5,7 +5,7 @@
 
 ## Summary
 
-Add a `ragnatramp reconcile <file>` command that discovers VM IPv4 addresses via `Get-VMNetworkAdapter`, persists them (plus MAC, IPv6, adapter name, source, and previousIpv4) into the existing state file, and syncs `/etc/hosts` inside each running Linux VM via PowerShell Direct (`Invoke-Command -VMName`). The reconcile step runs automatically after VM creation/start in the `up` workflow. IP discovery uses fail-fast semantics (any running VM without IPv4 aborts reconcile); hosts sync is per-VM non-fatal.
+Add a `ragnatramp reconcile <file>` command that discovers VM IPv4 addresses via `Get-VMNetworkAdapter`, persists them (plus MAC, IPv6, adapter name, source, and previousIpv4) into the existing state file, and syncs `/etc/hosts` inside each running Linux VM via PowerShell Direct (`Invoke-Command -VMName`). The reconcile step runs automatically after VM creation/start in the `up` workflow. IP discovery uses fail-fast semantics (any running VM without IPv4 aborts reconcile); hosts sync is per-VM non-fatal. A `--dry-run` flag enables read-only preview: discovers IPs, computes state diffs, and renders the hosts block without writing state or touching guests.
 
 ## Technical Context
 
@@ -33,7 +33,7 @@ Add a `ragnatramp reconcile <file>` command that discovers VM IPv4 addresses via
 | VI. Audit-Friendly Output | PASS | Reconcile supports `--json` and `--verbose` flags. Per-VM results reported. |
 | VII. Predictable Failures | PASS | Fail-fast on IP discovery failure; actionable error messages per VM; clear exit codes. |
 | VIII. Explicit State Management | PASS | Network data stored in existing `.ragnatramp/state.json`. Atomic writes preserved. Migration handles old state files gracefully. |
-| IX. Explicit CLI Behavior | PASS | `--verbose` prints PowerShell commands to stderr (cosmetic only). No behavioral side effects from flags. |
+| IX. Explicit CLI Behavior | PASS | `--verbose` prints PowerShell commands to stderr (cosmetic only). `--dry-run` has a single effect: suppress writes (state + guest). No hidden or conditional behavior. |
 
 **Gate Result**: ALL PASS. No violations. Proceed to Phase 0.
 
@@ -56,7 +56,7 @@ specs/003-reconcile-vm-hosts/
 ```text
 src/
 ├── cli/
-│   ├── index.ts                    # MODIFY: Register reconcile command
+│   ├── index.ts                    # MODIFY: Register reconcile command (--json, --verbose, --dry-run)
 │   ├── output.ts                   # NO CHANGE (existing patterns sufficient)
 │   └── commands/
 │       ├── reconcile.ts            # NEW: reconcile command handler
@@ -161,10 +161,19 @@ tests/
 
 ### Module 4: Orchestrator (`src/core/reconcile/orchestrator.ts`)
 
-**Responsibility**: Coordinate the full reconcile workflow: discover → diff → update state → sync hosts.
+**Responsibility**: Coordinate the full reconcile workflow: discover → diff → update state → sync hosts. Support dry-run mode.
 
 **Exports**:
 - `runReconcile(executor, stateManager, config, options?) → Promise<ReconcileResult>`
+
+**Options**:
+```typescript
+interface ReconcileOptions {
+  dryRun?: boolean;    // Default: false. When true, skip steps 6–9 (no writes).
+  verbose?: boolean;   // Passed through to executor
+  timeout?: number;    // IP discovery timeout in ms (default: 60000)
+}
+```
 
 **Workflow**:
 1. Load state, get list of managed VMs
@@ -172,11 +181,14 @@ tests/
 3. Call `discoverAllNetworkState()` for all running VMs
 4. **Fail-fast gate**: If any running VM lacks IPv4, abort with `ReconcileError`
 5. Call `diffNetworkState()` for each VM to compute updates
-6. Update state with new network data; `save()` atomically
-7. Null out network for non-running VMs
-8. Render hosts block from running VMs with IPv4
-9. Call `syncHostsToAllVMs()` — per-VM non-fatal
-10. Return `ReconcileResult` with per-VM outcomes
+6. **If `dryRun`**: Skip to step 10 (return results without side effects)
+7. Update state with new network data; `save()` atomically
+8. Null out network for non-running VMs
+9. Render hosts block from running VMs with IPv4
+10. Call `syncHostsToAllVMs()` — per-VM non-fatal
+11. Return `ReconcileResult` with per-VM outcomes
+
+**Dry-run behavior**: Steps 1–5 execute normally (read-only Hyper-V queries + in-memory diff). The hosts block is rendered (step 9 equivalent) and included in the result for display, but no `Invoke-Command` is executed and no state file is written. The `ReconcileResult.dryRun` flag is set to `true` so the CLI layer can format output accordingly.
 
 ### Module 5: State Extension (`src/state/types.ts` + `src/state/manager.ts`)
 
@@ -274,10 +286,56 @@ The `up` command in `src/cli/commands/up.ts` currently follows this flow:
 1. Load & validate config
 2. Create executor (with verbose)
 3. Load state (fail if no state)
-4. Run reconcile orchestrator
+4. Run reconcile orchestrator (pass dryRun flag from CLI)
 5. Report per-VM results (human or JSON)
 6. Exit 0 on success, 1 on fail-fast (IP missing), 2 on system error
 ```
+
+**CLI flags**: `--json`, `--verbose`, `--dry-run`
+
+### `reconcile --dry-run` Mode
+
+When `--dry-run` is passed, the reconcile command performs read-only operations only:
+
+```
+1. Load & validate config
+2. Create executor (with verbose)
+3. Load state (fail if no state)
+4. Run reconcile orchestrator with dryRun: true
+   a. Discover IPs (read-only Hyper-V queries)
+   b. Compute state diffs (in-memory only)
+   c. Render hosts block (in-memory only)
+   d. Skip: state write, guest Invoke-Command
+5. Print dry-run report:
+   a. Per-VM: discovered IP, MAC, adapter name
+   b. Per-VM: diff (old → new) for changed fields, "unchanged" for stable
+   c. Rendered hosts block (full text)
+6. Exit 0 on success, 1 on fail-fast (IP missing)
+```
+
+**Human output format**:
+```
+Dry run — no changes will be applied.
+
+Discovered IPs:
+  web: 172.16.0.10 (mac: 00:15:5D:01:02:03, adapter: Network Adapter)
+  db:  172.16.0.11 (mac: 00:15:5D:01:02:04, adapter: Network Adapter)
+
+State diffs:
+  web: ipv4 unchanged (172.16.0.10)
+  db:  ipv4 changed: 172.16.0.8 → 172.16.0.11
+
+Hosts block:
+  # BEGIN RAGNATRAMP
+  # Managed by ragnatramp - do not edit this block
+  172.16.0.11 db
+  172.16.0.10 web
+  # END RAGNATRAMP
+```
+
+**JSON output** (`--dry-run --json`): Returns a `ReconcileResult` object with `dryRun: true`, containing `discovery`, `diffs`, and `hostsBlock` fields. No `hostSync` results (sync was skipped).
+
+**Constitution IX compliance**: `--dry-run` has a single, well-defined effect — suppress writes. It does not alter discovery behavior, diff logic, or output format beyond adding the "Dry run" header and omitting hosts sync results.
 
 ### `status` Command (Modified)
 
@@ -327,6 +385,6 @@ See [research.md](./research.md) for PowerShell cmdlet research.
 | VI. Audit-Friendly | PASS | `--json` and `--verbose` supported. Per-VM results. |
 | VII. Predictable Failures | PASS | Fail-fast on missing IPv4. Actionable error messages. Clear exit codes. |
 | VIII. Explicit State | PASS | Network data in `.ragnatramp/state.json`. Atomic writes. |
-| IX. Explicit CLI | PASS | `--verbose` is cosmetic. No hidden behavior. |
+| IX. Explicit CLI | PASS | `--verbose` is cosmetic. `--dry-run` suppresses writes only. No hidden behavior. |
 
 **Post-Design Gate**: ALL PASS.

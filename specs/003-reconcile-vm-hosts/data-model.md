@@ -197,15 +197,17 @@ interface HostsSyncResult {
 ```typescript
 interface ReconcileResult {
   success: boolean;
+  dryRun: boolean;
   discovery: DiscoveryResult[];
   diffs: NetworkStateDiff[];
-  hostSync: HostsSyncResult[];
+  hostsBlock: string;              // Rendered managed block (always computed)
+  hostSync: HostsSyncResult[];     // Empty when dryRun is true
   summary: {
     discovered: number;
     changed: number;
-    synced: number;
+    synced: number;                // 0 when dryRun is true
     skipped: number;
-    failed: number;
+    failed: number;                // 0 when dryRun is true
   };
 }
 ```

@@ -16,6 +16,7 @@
 - Q: What casing for `/etc/hosts` managed block markers? → A: Uppercase: `# BEGIN RAGNATRAMP` / `# END RAGNATRAMP`.
 - Q: (Revised) Which network fields should the state file store per VM? → A: Full schema — `ipv4`, `ipv6` (optional list), `mac`, `adapterName` (optional), `discoveredAt`, `source` ("hyperv" | "guest-file" | "guest-cmd"), `previousIpv4` (optional, stored on change). Supersedes prior minimal answer.
 - Q: Should `ragnatramp status` display network fields? → A: Yes. Status MUST show `ipv4` (or `ipv6` if no IPv4), `adapterName`, and `source` per VM.
+- Q: Should reconcile support a dry-run mode? → A: Yes. `ragnatramp reconcile --dry-run` prints discovered IPs, state diffs (old → new), and the rendered `/etc/hosts` managed block, without writing state or touching guests.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -69,6 +70,23 @@ As a user, I want `ragnatramp up` to automatically run the reconcile step after 
 
 ---
 
+### User Story 4 - Dry-Run Preview of Reconcile (Priority: P4)
+
+As a user, I want to run `ragnatramp reconcile <file> --dry-run` to preview what reconcile would do — see discovered IPs, state diffs (old vs new values), and the rendered `/etc/hosts` managed block — without writing any changes to the state file or touching guest VMs. This lets me verify the reconcile outcome before committing it.
+
+**Why this priority**: Dry-run is a safety and debugging feature. It depends on the core reconcile logic (Stories 1–2) being implemented first, but it reuses the same discovery and rendering code paths in read-only mode.
+
+**Independent Test**: Can be tested by running `ragnatramp reconcile ragnatramp.yaml --dry-run` and verifying that the state file is unchanged (compare checksum before/after) and no guest VMs were contacted (verify via `--verbose` that no `Invoke-Command` was executed).
+
+**Acceptance Scenarios**:
+
+1. **Given** two running VMs with IPs already in state, **When** the user runs `ragnatramp reconcile ragnatramp.yaml --dry-run`, **Then** the CLI prints each VM's discovered IP, shows "no change" or "changed: old → new" per VM, prints the rendered hosts block, and exits with code 0 without modifying the state file.
+2. **Given** a VM whose IP has changed since the last reconcile, **When** the user runs `ragnatramp reconcile ragnatramp.yaml --dry-run`, **Then** the CLI prints the diff showing `ipv4: 172.16.0.10 → 172.16.0.15` for that VM, and the state file remains unchanged.
+3. **Given** `--dry-run` combined with `--json`, **When** the user runs `ragnatramp reconcile ragnatramp.yaml --dry-run --json`, **Then** the output is a JSON object containing discovery results, diffs, and the rendered hosts block, with no side effects.
+4. **Given** `--dry-run` mode, **When** the reconcile discovers a running VM with no IP, **Then** the fail-fast behavior still applies to reporting (exit non-zero) but no state is written.
+
+---
+
 ### Edge Cases
 
 - What happens when a VM has an IPv6 address but no IPv4 address? The system stores the IPv6 addresses in the `network.ipv6` field and reports a warning that no IPv4 was found. The `/etc/hosts` sync uses IPv4 only; no IPv6 entries are written to hosts files. The `status` command displays the IPv6 address when no IPv4 is available.
@@ -100,6 +118,7 @@ As a user, I want `ragnatramp up` to automatically run the reconcile step after 
 - **FR-015**: System MUST NOT manage the Windows host machine's hosts file.
 - **FR-016**: System MUST NOT implement static IP assignment; only DHCP-assigned addresses are discovered and recorded.
 - **FR-017**: The `ragnatramp status` command MUST display network fields for each VM: `ipv4` (or `ipv6` if no IPv4 is available), `adapterName`, and `source`. These fields are shown in both human-readable and `--json` output modes.
+- **FR-018**: System MUST support a `--dry-run` flag on the `reconcile` command. When set, the system performs IP discovery and computes state diffs and the hosts block, then prints: (a) discovered IPs per VM, (b) state diffs showing old → new values for changed fields, (c) the rendered `/etc/hosts` managed block. The system MUST NOT write to the state file or execute any guest commands (`Invoke-Command`) in dry-run mode. Exit code follows normal semantics (0 success, non-zero if fail-fast triggered).
 
 ### Key Entities
 
@@ -117,6 +136,7 @@ As a user, I want `ragnatramp up` to automatically run the reconcile step after 
 - **SC-004**: Non-ragnatramp entries in `/etc/hosts` are never modified, verifiable by adding custom entries before reconcile and confirming they remain after.
 - **SC-005**: `ragnatramp up` completes with VMs having correct IPs in state and correct `/etc/hosts` entries without the user needing to run any additional commands.
 - **SC-006**: When a VM has no discoverable IP, the user receives a clear warning message within 90 seconds of the reconcile step starting.
+- **SC-007**: Running `reconcile --dry-run` produces identical discovery and diff output as a real reconcile, but leaves the state file and guest VMs completely untouched, verifiable by comparing file checksums before and after.
 
 ### Assumptions
 
