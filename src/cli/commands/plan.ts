@@ -24,6 +24,7 @@ import { createOutput, OutputFormatter } from '../output.js';
  */
 export interface PlanCommandOptions {
   json?: boolean;
+  verbose?: boolean;
 }
 
 /**
@@ -75,7 +76,7 @@ export async function planCommand(
 
     // Step 3: Query current VMs from Hyper-V (read-only)
     // Note: We only call getVMs which is a read-only query
-    const executor = new HyperVExecutor();
+    const executor = new HyperVExecutor({ verbose: options.verbose });
     let actualVMs: import('../../hyperv/types.js').HyperVVM[] = [];
 
     try {

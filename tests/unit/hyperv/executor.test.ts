@@ -6,7 +6,7 @@
  * Integration tests with actual PowerShell are done separately.
  */
 
-import { describe, it } from 'node:test';
+import { describe, it, afterEach } from 'node:test';
 import assert from 'node:assert';
 
 import { HyperVExecutor, HyperVError } from '../../../src/hyperv/executor.js';
@@ -86,12 +86,77 @@ describe('HyperVExecutor', () => {
     });
   });
 
-  // Note: execute() and executeVoid() tests would require mocking spawn,
-  // which is complex in ES modules. These methods are tested via integration
-  // tests that actually run PowerShell commands.
-  //
-  // The command builders (commands.ts) are tested separately to ensure
-  // the scripts are well-formed.
+  describe('verbose output', () => {
+    const originalWrite = process.stderr.write;
+    let captured: string[] = [];
+
+    afterEach(() => {
+      process.stderr.write = originalWrite;
+      captured = [];
+    });
+
+    function spyStderrWrite(): void {
+      captured = [];
+      process.stderr.write = function (chunk: unknown): boolean {
+        if (typeof chunk === 'string') {
+          captured.push(chunk);
+        }
+        return true;
+      } as typeof process.stderr.write;
+    }
+
+    it('should NOT write to stderr when verbose is false (default)', async () => {
+      spyStderrWrite();
+      const executor = new HyperVExecutor();
+      try {
+        await executor.execute('Write-Output "test"');
+      } catch {
+        // Expected: spawn fails in test environment (no PowerShell)
+      }
+      const verboseOutput = captured.filter((s) => s.includes('[PS]'));
+      assert.strictEqual(verboseOutput.length, 0, 'should not write [PS] output when verbose is false');
+    });
+
+    it('should write to stderr exactly once when verbose is true', async () => {
+      spyStderrWrite();
+      const executor = new HyperVExecutor({ verbose: true });
+      try {
+        await executor.execute('Write-Output "test"');
+      } catch {
+        // Expected: spawn fails in test environment
+      }
+      const verboseOutput = captured.filter((s) => s.includes('[PS]'));
+      assert.strictEqual(verboseOutput.length, 1, 'should write [PS] output exactly once');
+    });
+
+    it('should include the exact script content in verbose output', async () => {
+      spyStderrWrite();
+      const script = 'Get-VM | Select-Object Name';
+      const executor = new HyperVExecutor({ verbose: true });
+      try {
+        await executor.execute(script);
+      } catch {
+        // Expected: spawn fails in test environment
+      }
+      const verboseOutput = captured.filter((s) => s.includes('[PS]'));
+      assert.strictEqual(verboseOutput.length, 1);
+      assert.ok(
+        verboseOutput[0]!.includes(script),
+        `verbose output should contain the exact script: "${script}"`
+      );
+    });
+
+    it('should not change reject behavior when verbose is true', async () => {
+      spyStderrWrite();
+      const executor = new HyperVExecutor({ verbose: true });
+      // execute() should still reject (spawn fails) — verbose doesn't suppress errors
+      await assert.rejects(
+        () => executor.execute('Write-Output "test"'),
+        (err: unknown) => err instanceof Error,
+        'should still reject when PowerShell is unavailable'
+      );
+    });
+  });
 });
 
 describe('Error classification patterns', () => {

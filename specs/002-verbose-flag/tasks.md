@@ -77,28 +77,28 @@
 
 ### Implementation for User Story 1
 
-- [ ] T005 [US1] Add `--verbose` as a global option on the Commander program in `src/cli/index.ts`
+- [x] T005 [US1] Add `--verbose` as a global option on the Commander program in `src/cli/index.ts`
   - Add `.option('--verbose', 'Print PowerShell commands before execution')` on the `program` object (before any `.command()` calls)
   - Commander will automatically parse it and make it available via `program.opts().verbose`
-- [ ] T006 [US1] Thread `verbose` into `upCommand` in `src/cli/commands/up.ts`
+- [x] T006 [US1] Thread `verbose` into `upCommand` in `src/cli/commands/up.ts`
   - Add `verbose?: boolean` to `UpCommandOptions` interface
   - Change `const executor = new HyperVExecutor();` to `const executor = new HyperVExecutor({ verbose: options.verbose });`
-- [ ] T007 [P] [US1] Thread `verbose` into `planCommand` in `src/cli/commands/plan.ts`
+- [x] T007 [P] [US1] Thread `verbose` into `planCommand` in `src/cli/commands/plan.ts`
   - Add `verbose?: boolean` to `PlanCommandOptions` interface
   - Change `const executor = new HyperVExecutor();` to `const executor = new HyperVExecutor({ verbose: options.verbose });`
-- [ ] T008 [P] [US1] Thread `verbose` into `statusCommand` in `src/cli/commands/status.ts`
+- [x] T008 [P] [US1] Thread `verbose` into `statusCommand` in `src/cli/commands/status.ts`
   - Add `verbose?: boolean` to `StatusCommandOptions` interface
   - Change `const executor = new HyperVExecutor();` to `const executor = new HyperVExecutor({ verbose: options.verbose });`
-- [ ] T009 [P] [US1] Thread `verbose` into `haltCommand` in `src/cli/commands/halt.ts`
+- [x] T009 [P] [US1] Thread `verbose` into `haltCommand` in `src/cli/commands/halt.ts`
   - Add `verbose?: boolean` to `HaltCommandOptions` interface
   - Change `const executor = new HyperVExecutor();` to `const executor = new HyperVExecutor({ verbose: options.verbose });`
-- [ ] T010 [P] [US1] Thread `verbose` into `destroyCommand` in `src/cli/commands/destroy.ts`
+- [x] T010 [P] [US1] Thread `verbose` into `destroyCommand` in `src/cli/commands/destroy.ts`
   - Add `verbose?: boolean` to `DestroyCommandOptions` interface
   - Change `const executor = new HyperVExecutor();` to `const executor = new HyperVExecutor({ verbose: options.verbose });`
-- [ ] T011 [P] [US1] Thread `verbose` into `checkpointCommand` in `src/cli/commands/checkpoint.ts`
+- [x] T011 [P] [US1] Thread `verbose` into `checkpointCommand` in `src/cli/commands/checkpoint.ts`
   - Add `verbose?: boolean` to `CheckpointCommandOptions` interface
   - Change `const executor = new HyperVExecutor();` to `const executor = new HyperVExecutor({ verbose: options.verbose });`
-- [ ] T012 [P] [US1] Thread `verbose` into `restoreCommand` in `src/cli/commands/restore.ts`
+- [x] T012 [P] [US1] Thread `verbose` into `restoreCommand` in `src/cli/commands/restore.ts`
   - Add `verbose?: boolean` to `RestoreCommandOptions` interface
   - Change `const executor = new HyperVExecutor();` to `const executor = new HyperVExecutor({ verbose: options.verbose });`
 
@@ -116,7 +116,7 @@
 
 No new code is needed — US2 is satisfied by the default `verbose: false` in the executor constructor (T003). This phase exists for verification only.
 
-- [ ] T013 [US2] Verify `validate` command (no executor) is unaffected — run `ragnatramp validate ragnatramp.yaml` and confirm no `[PS]` output in `src/cli/commands/validate.ts`
+- [x] T013 [US2] Verify `validate` command (no executor) is unaffected — run `ragnatramp validate ragnatramp.yaml` and confirm no `[PS]` output in `src/cli/commands/validate.ts`
   - `validate` does not create an `HyperVExecutor`, so no threading is needed. Confirm the command handler does not import or reference the verbose module.
 
 **Checkpoint**: All commands without `--verbose` produce identical output to the pre-feature baseline.
@@ -133,7 +133,7 @@ No new code is needed — US2 is satisfied by the default `verbose: false` in th
 
 No new code is needed — US3 is satisfied by the `supportsAnsi()` check in the verbose helper (T001) and the conditional ANSI wrapping in `formatCommand()` (T001). The executor passes `supportsAnsi()` at call time (T004), so TTY detection is evaluated per-invocation.
 
-- [ ] T014 [US3] Verify ANSI-free output by manually testing `--verbose` with stderr redirected to a file — confirm no escape codes in output
+- [x] T014 [US3] Verify ANSI-free output by manually testing `--verbose` with stderr redirected to a file — confirm no escape codes in output
 
 **Checkpoint**: Verbose output degrades to plain text in non-TTY environments.
 
@@ -143,13 +143,13 @@ No new code is needed — US3 is satisfied by the `supportsAnsi()` check in the 
 
 **Purpose**: Unit tests for verbose formatting and executor verbose behavior. Explicitly requested by user.
 
-- [ ] T015 [P] Create unit tests for verbose helper in `tests/unit/hyperv/verbose.test.ts`
+- [x] T015 [P] Create unit tests for verbose helper in `tests/unit/hyperv/verbose.test.ts`
   - Test `formatCommand()` with single-line script: output starts with `[PS] `, has blank line before and after
   - Test `formatCommand()` with multi-line script: first line has `[PS] ` prefix, continuation lines have 5-space indent, blank line fence
   - Test `formatCommand()` with `ansi: true`: output contains `\x1b[90m` and `\x1b[0m`
   - Test `formatCommand()` with `ansi: false`: output contains no ANSI escape sequences
   - Test `supportsAnsi()` returns a boolean (smoke test — TTY state depends on environment)
-- [ ] T016 [P] Add verbose executor tests in `tests/unit/hyperv/executor.test.ts`
+- [x] T016 [P] Add verbose executor tests in `tests/unit/hyperv/executor.test.ts`
   - Test: executor with `verbose: false` (default) does NOT write to `process.stderr` — spy on `process.stderr.write`, call `execute()` with a trivial script, assert spy was NOT called with `[PS]` content (script will fail on non-Hyper-V, but stderr spy fires before spawn)
   - Test: executor with `verbose: true` DOES write to `process.stderr` exactly once per `execute()` call — spy on `process.stderr.write`, call `execute()`, assert spy was called with string containing `[PS]` and the exact script content
   - Test: printed string matches the exact command passed to `execute()` — compare spy argument content against input script
@@ -163,9 +163,9 @@ No new code is needed — US3 is satisfied by the `supportsAnsi()` check in the 
 
 **Purpose**: Build verification and cleanup.
 
-- [ ] T017 Run `npm run build` and verify zero TypeScript compilation errors
-- [ ] T018 Run `npm test` and verify all tests pass (existing + new)
-- [ ] T019 Run quickstart.md validation — manually walk through `specs/002-verbose-flag/quickstart.md` scenarios
+- [x] T017 Run `npm run build` and verify zero TypeScript compilation errors
+- [x] T018 Run `npm test` and verify all tests pass (existing + new)
+- [x] T019 Run quickstart.md validation — manually walk through `specs/002-verbose-flag/quickstart.md` scenarios
 
 ---
 

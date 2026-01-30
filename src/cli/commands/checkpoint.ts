@@ -27,6 +27,7 @@ import type { CheckpointState } from '../../state/types.js';
 export interface CheckpointCommandOptions {
   name: string;
   json?: boolean;
+  verbose?: boolean;
 }
 
 /**
@@ -95,7 +96,7 @@ export async function checkpointCommand(
     }
 
     // Step 4: Query current VMs from Hyper-V
-    const executor = new HyperVExecutor();
+    const executor = new HyperVExecutor({ verbose: options.verbose });
     let actualVMs: HyperVVM[] = [];
 
     try {

@@ -26,6 +26,7 @@ import type { Action } from '../../core/types.js';
  */
 export interface UpCommandOptions {
   json?: boolean;
+  verbose?: boolean;
 }
 
 /**
@@ -67,7 +68,7 @@ export async function upCommand(
     output.success('Configuration validated');
 
     // Step 2: Create executor and run preflight checks
-    const executor = new HyperVExecutor();
+    const executor = new HyperVExecutor({ verbose: options.verbose });
 
     output.info('Running preflight checks...');
     const preflightResults = await runPreflightChecks(executor, config);

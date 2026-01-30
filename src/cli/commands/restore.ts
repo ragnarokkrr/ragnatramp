@@ -26,6 +26,7 @@ import type { HyperVVM } from '../../hyperv/types.js';
 export interface RestoreCommandOptions {
   name: string;
   json?: boolean;
+  verbose?: boolean;
 }
 
 /**
@@ -113,7 +114,7 @@ export async function restoreCommand(
     }
 
     // Step 5: Query current VMs from Hyper-V
-    const executor = new HyperVExecutor();
+    const executor = new HyperVExecutor({ verbose: options.verbose });
     let actualVMs: HyperVVM[] = [];
 
     try {

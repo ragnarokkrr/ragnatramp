@@ -22,10 +22,24 @@ const packageJson = JSON.parse(readFileSync(packagePath, 'utf-8')) as { version:
 program
   .name('ragnatramp')
   .description('Vagrant-like VM orchestration for Hyper-V on Windows 11 Pro')
-  .version(packageJson.version);
+  .version(packageJson.version)
+  .option('--verbose', 'Print PowerShell commands before execution');
 
-// Commands will be added in subsequent phases
-// For now, provide a placeholder to verify CLI works
+/**
+ * Verbose option description shared across all commands that use HyperVExecutor.
+ */
+const VERBOSE_DESC = 'Print PowerShell commands before execution';
+
+/**
+ * Merge the global --verbose flag into command-level options.
+ * Supports both positions:
+ *   ragnatramp --verbose up file    (parent parses --verbose)
+ *   ragnatramp up file --verbose    (subcommand parses --verbose)
+ */
+function withGlobalOpts<T extends Record<string, unknown>>(opts: T): T & { verbose?: boolean } {
+  const globalOpts = program.opts<{ verbose?: boolean }>();
+  return { ...opts, verbose: (opts as Record<string, unknown>).verbose === true || globalOpts.verbose === true };
+}
 
 program
   .command('validate <file>')
@@ -37,46 +51,53 @@ program
   .command('plan <file>')
   .description('Show intended actions without executing')
   .option('--json', 'Output as JSON')
-  .action(planCommand);
+  .option('--verbose', VERBOSE_DESC)
+  .action((file, opts) => planCommand(file, withGlobalOpts(opts)));
 
 program
   .command('up <file>')
   .description('Create/start VMs to match configuration')
   .option('--json', 'Output as JSON')
-  .action(upCommand);
+  .option('--verbose', VERBOSE_DESC)
+  .action((file, opts) => upCommand(file, withGlobalOpts(opts)));
 
 program
   .command('status <file>')
   .description('Show status of managed VMs')
   .option('--json', 'Output as JSON')
-  .action(statusCommand);
+  .option('--verbose', VERBOSE_DESC)
+  .action((file, opts) => statusCommand(file, withGlobalOpts(opts)));
 
 program
   .command('halt <file> [machine]')
   .description('Stop managed VMs')
   .option('--all', 'Stop all managed VMs')
   .option('--json', 'Output as JSON')
-  .action(haltCommand);
+  .option('--verbose', VERBOSE_DESC)
+  .action((file, machine, opts) => haltCommand(file, machine, withGlobalOpts(opts)));
 
 program
   .command('destroy <file> [machine]')
   .description('Remove managed VMs and their disks')
   .option('--all', 'Destroy all managed VMs')
   .option('--json', 'Output as JSON')
-  .action(destroyCommand);
+  .option('--verbose', VERBOSE_DESC)
+  .action((file, machine, opts) => destroyCommand(file, machine, withGlobalOpts(opts)));
 
 program
   .command('checkpoint <file>')
   .description('Create checkpoint for managed VMs')
   .requiredOption('--name <name>', 'Checkpoint name')
   .option('--json', 'Output as JSON')
-  .action(checkpointCommand);
+  .option('--verbose', VERBOSE_DESC)
+  .action((file, opts) => checkpointCommand(file, withGlobalOpts(opts)));
 
 program
   .command('restore <file>')
   .description('Restore managed VMs from checkpoint')
   .requiredOption('--name <name>', 'Checkpoint name')
   .option('--json', 'Output as JSON')
-  .action(restoreCommand);
+  .option('--verbose', VERBOSE_DESC)
+  .action((file, opts) => restoreCommand(file, withGlobalOpts(opts)));
 
 program.parse();

@@ -25,6 +25,7 @@ import type { VMState } from '../../state/types.js';
  */
 export interface StatusCommandOptions {
   json?: boolean;
+  verbose?: boolean;
 }
 
 /**
@@ -104,7 +105,7 @@ export async function statusCommand(
     }
 
     // Step 3: Query each VM from Hyper-V
-    const executor = new HyperVExecutor();
+    const executor = new HyperVExecutor({ verbose: options.verbose });
     const vmStatuses: VMStatusInfo[] = [];
     let hyperVAvailable = true;
 

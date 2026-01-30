@@ -37,6 +37,7 @@ import type { Action, DestroyActionDetails } from '../../core/types.js';
 export interface DestroyCommandOptions {
   all?: boolean;
   json?: boolean;
+  verbose?: boolean;
 }
 
 /**
@@ -131,7 +132,7 @@ export async function destroyCommand(
     }
 
     // Step 4: Query current VMs from Hyper-V
-    const executor = new HyperVExecutor();
+    const executor = new HyperVExecutor({ verbose: options.verbose });
     let actualVMs: HyperVVM[] = [];
 
     try {
