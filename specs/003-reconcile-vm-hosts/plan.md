@@ -1,23 +1,23 @@
 # Implementation Plan: Reconcile VM IPs + Sync /etc/hosts
 
-**Branch**: `003-reconcile-vm-hosts` | **Date**: 2026-01-30 | **Spec**: [spec.md](./spec.md)
-**Input**: Feature specification from `specs/003-reconcile-vm-hosts/spec.md`
+**Branch**: `003-reconcile-vm-hosts` | **Date**: 2026-02-02 | **Spec**: `specs/003-reconcile-vm-hosts/spec.md`
+**Input**: Feature specification from `/specs/003-reconcile-vm-hosts/spec.md`
 
 ## Summary
 
-Add a `ragnatramp reconcile <file>` command that discovers VM IPv4 addresses via `Get-VMNetworkAdapter`, persists them (plus MAC, IPv6, adapter name, source, and previousIpv4) into the existing state file, and syncs `/etc/hosts` inside each running Linux VM via PowerShell Direct (`Invoke-Command -VMName`). The reconcile step runs automatically after VM creation/start in the `up` workflow. IP discovery uses fail-fast semantics (any running VM without IPv4 aborts reconcile); hosts sync is per-VM non-fatal. A `--dry-run` flag enables read-only preview: discovers IPs, computes state diffs, and renders the hosts block without writing state or touching guests.
+Add a `ragnatramp reconcile <file>` command that discovers VM IPv4 addresses using a tiered host-only strategy (KVP → ARP fallback), persists network state, and syncs `/etc/hosts` inside Linux guests via SSH. Integrates automatically into the `up` workflow. Supports `--dry-run`, `--verbose`, and `--json` flags.
 
 ## Technical Context
 
-**Language/Version**: TypeScript 5.x, Node.js >=20.0.0, ES modules
-**Primary Dependencies**: Commander.js 12, js-yaml 4, ajv 8 (existing); no new runtime deps
-**Storage**: `.ragnatramp/state.json` (JSON, atomic write via temp-file + rename)
-**Testing**: `node:test` runner with `node:assert` (existing pattern)
-**Target Platform**: Windows 11 Pro with Hyper-V, user-space (Hyper-V Administrators group)
+**Language/Version**: TypeScript 5.4, Node.js 20+ (ES modules)
+**Primary Dependencies**: commander (CLI), js-yaml (YAML), ajv (schema validation), child_process (PowerShell + SSH spawning)
+**Storage**: `.ragnatramp/state.json` (additive `network` field on existing `VMState`)
+**Testing**: Node.js built-in `node:test` module with `tsx` loader
+**Target Platform**: Windows 11 Pro with Hyper-V, user-space only
 **Project Type**: Single CLI project
-**Performance Goals**: IP discovery complete within 60s timeout; hosts sync within 5s per VM
-**Constraints**: No admin elevation; no SSH; no Ansible; PowerShell cmdlets only; DHCP only (no static IP)
-**Scale/Scope**: 1–3 VMs (MVP constraint)
+**Performance Goals**: IP discovery completes within 60s timeout per VM; hosts sync per VM within 10s SSH round-trip
+**Constraints**: No npm dependencies added (SSH via system `ssh` binary, PowerShell via system `powershell.exe`); no admin elevation; no guest-side dependencies beyond `sshd`
+**Scale/Scope**: 2–3 VMs per project (MVP constraint)
 
 ## Constitution Check
 
@@ -25,17 +25,17 @@ Add a `ragnatramp reconcile <file>` command that discovers VM IPv4 addresses via
 
 | Principle | Status | Notes |
 |-----------|--------|-------|
-| I. User-Space Only (NON-NEGOTIABLE) | PASS | `Get-VMNetworkAdapter` and `Invoke-Command -VMName` work under Hyper-V Administrators membership. No elevation needed. |
-| II. Safety First (NON-NEGOTIABLE) | PASS | Reconcile only modifies state for VMs already in the state file. Hosts sync uses marker-delimited blocks to avoid touching user content. Ownership verified before guest execution. |
-| III. Idempotent Operations | PASS | Multiple reconcile runs produce identical state/hosts. Managed block is replaced atomically each time. |
-| IV. Deterministic Naming & Tagging | PASS | Hostnames in `/etc/hosts` derive from the deterministic machine `name` field in config YAML. No new naming introduced. |
-| V. Declarative YAML Only (NON-NEGOTIABLE) | PASS | No new YAML scripting. State schema extended with plain data fields. |
-| VI. Audit-Friendly Output | PASS | Reconcile supports `--json` and `--verbose` flags. Per-VM results reported. |
-| VII. Predictable Failures | PASS | Fail-fast on IP discovery failure; actionable error messages per VM; clear exit codes. |
-| VIII. Explicit State Management | PASS | Network data stored in existing `.ragnatramp/state.json`. Atomic writes preserved. Migration handles old state files gracefully. |
-| IX. Explicit CLI Behavior | PASS | `--verbose` prints PowerShell commands to stderr (cosmetic only). `--dry-run` has a single effect: suppress writes (state + guest). No hidden or conditional behavior. |
+| I. User-Space Only | **PASS** | All operations use `Get-VMNetworkAdapter`, `Get-NetNeighbor`, `Get-VMIntegrationService` (Hyper-V Administrators), and system `ssh` binary. No elevation. |
+| II. Safety First | **PASS** | Only modifies state for VMs tracked in state file. Only writes managed block in `/etc/hosts` (delimited markers). Ownership verified before any action. |
+| III. Idempotent Operations | **PASS** | `reconcile` converges to current state; repeated runs produce identical results. Managed hosts block replaced atomically. |
+| IV. Deterministic Naming & Tagging | **PASS** | No new naming. Uses existing VM names from state. Machine `name` from config used as hostname in hosts entries. |
+| V. Declarative YAML Only | **PASS** | New `ssh.user` and `ssh.private_key` fields are static declarations. No scripting. Schema-validated. |
+| VI. Audit-Friendly Output | **PASS** | `--verbose` shows PowerShell scripts and SSH commands. `--json` for machine output. Diagnostics emit actionable warnings. |
+| VII. Predictable Failures | **PASS** | Two-tier failure policy (fail-fast IP, per-VM non-fatal hosts sync). KVP diagnostic warns with fix instructions. SSH reachability pre-checked. |
+| VIII. Explicit State Management | **PASS** | Network state stored in `.ragnatramp/state.json` under existing `vms` records. No new files. Additive, backward-compatible. |
+| IX. Explicit CLI Behavior | **PASS** | `--dry-run` does exactly one thing: read-only preview. `--verbose` doesn't change execution paths. Diagnostics are informational only. |
 
-**Gate Result**: ALL PASS. No violations. Proceed to Phase 0.
+**Gate result**: All principles pass. No violations to justify.
 
 ## Project Structure
 
@@ -44,11 +44,12 @@ Add a `ragnatramp reconcile <file>` command that discovers VM IPv4 addresses via
 ```text
 specs/003-reconcile-vm-hosts/
 ├── plan.md              # This file
-├── research.md          # Phase 0: PowerShell cmdlet research
-├── data-model.md        # Phase 1: State schema extension
-├── quickstart.md        # Phase 1: Developer quickstart
-├── contracts/           # Phase 1: PowerShell script contracts
-└── tasks.md             # Phase 2: Task breakdown (via /speckit.tasks)
+├── research.md          # Phase 0 output (complete — R1–R8)
+├── data-model.md        # Phase 1 output
+├── quickstart.md        # Phase 1 output
+├── contracts/           # Phase 1 output
+│   └── reconcile-cli.md # CLI contract (not REST — this is a CLI tool)
+└── tasks.md             # Phase 2 output (via /speckit.tasks)
 ```
 
 ### Source Code (repository root)
@@ -56,335 +57,65 @@ specs/003-reconcile-vm-hosts/
 ```text
 src/
 ├── cli/
-│   ├── index.ts                    # MODIFY: Register reconcile command (--json, --verbose, --dry-run)
-│   ├── output.ts                   # NO CHANGE (existing patterns sufficient)
-│   └── commands/
-│       ├── reconcile.ts            # NEW: reconcile command handler
-│       ├── up.ts                   # MODIFY: Insert reconcile step after actions
-│       └── status.ts               # MODIFY: Display network fields
+│   ├── commands/
+│   │   ├── reconcile.ts          # NEW — reconcile command handler
+│   │   ├── up.ts                 # MODIFY — integrate reconcile after actions
+│   │   └── status.ts             # MODIFY — display network fields
+│   └── output.ts                 # MODIFY — add reconcile output formatting
+│
 ├── config/
-│   └── (no changes)
-├── state/
-│   ├── types.ts                    # MODIFY: Add NetworkState interface to VMState
-│   └── manager.ts                  # MODIFY: Add updateVMNetwork(), migration logic
-├── hyperv/
-│   ├── commands.ts                 # MODIFY: Add buildGetVMNetworkAdaptersScript()
-│   ├── queries.ts                  # MODIFY: Add getVMNetworkAdapters() query
-│   ├── types.ts                    # MODIFY: Add HyperVNetworkAdapter interface
-│   └── executor.ts                 # NO CHANGE
+│   ├── types.ts                  # MODIFY — add SSHConfig to machine/defaults types
+│   ├── schema.json               # MODIFY — add ssh block to JSON Schema
+│   └── resolver.ts               # MODIFY — resolve ssh defaults + path expansion
+│
 ├── core/
-│   ├── reconcile/                  # NEW: Reconcile module directory
-│   │   ├── discovery.ts            # NEW: IP discovery with retry/timeout
-│   │   ├── diff.ts                 # NEW: Detect IP changes, set previousIpv4
-│   │   ├── hosts.ts                # NEW: Render hosts block, push to guest
-│   │   └── orchestrator.ts         # NEW: Orchestrate discovery → diff → hosts sync
-│   ├── errors.ts                   # MODIFY: Add ReconcileError class
-│   └── reconciler.ts               # NO CHANGE (existing action reconciler unrelated)
+│   └── errors.ts                 # MODIFY — add ReconcileError, SSHError
+│
+├── hyperv/
+│   └── commands.ts               # MODIFY — add network adapter + integration service scripts
+│
+├── network/                      # NEW — network discovery module
+│   ├── discovery.ts              # Tiered IP discovery (KVP → ARP)
+│   ├── commands.ts               # PowerShell script builders for network queries
+│   ├── diagnostics.ts            # KVP status check, SSH reachability check
+│   └── types.ts                  # NetworkState, DiscoveryResult, DiagnosticResult
+│
+├── hosts/                        # NEW — /etc/hosts sync module
+│   ├── renderer.ts               # Build managed hosts block from VM IPs
+│   ├── sync.ts                   # SSH-based /etc/hosts read-modify-write
+│   └── ssh.ts                    # SSH command spawning wrapper
+│
+├── state/
+│   └── types.ts                  # MODIFY — add NetworkState to VMState
+│
 └── lib/
-    └── (no changes)
+    └── logger.ts                 # MODIFY — add reconcile-specific log helpers (if needed)
 
 tests/
 ├── unit/
-│   ├── reconcile-discovery.test.ts # NEW
-│   ├── reconcile-diff.test.ts      # NEW
-│   ├── reconcile-hosts.test.ts     # NEW
-│   └── state-migration.test.ts     # NEW
+│   ├── network/
+│   │   ├── discovery.test.ts     # KVP parsing, ARP parsing, tiered fallback
+│   │   ├── commands.test.ts      # PowerShell script output verification
+│   │   └── diagnostics.test.ts   # KVP status parsing, SSH port check
+│   ├── hosts/
+│   │   ├── renderer.test.ts      # Hosts block generation, idempotency
+│   │   └── ssh.test.ts           # SSH command construction, escaping
+│   ├── config/
+│   │   └── ssh-config.test.ts    # SSH config validation, defaults merging
+│   └── state/
+│       └── network-state.test.ts # NetworkState serialization, backward compat
+├── integration/
+│   ├── reconcile.test.ts         # End-to-end reconcile with mocked PowerShell + SSH
+│   └── reconcile-dryrun.test.ts  # Dry-run output verification
 └── fixtures/
     └── mock-responses/
-        ├── network-adapters.json   # NEW: Mock Get-VMNetworkAdapter responses
-        └── invoke-command.json     # NEW: Mock Invoke-Command responses
+        ├── network-adapter.json  # Mock Get-VMNetworkAdapter responses
+        ├── arp-neighbor.json     # Mock Get-NetNeighbor responses
+        └── integration-service.json  # Mock Get-VMIntegrationService responses
 ```
 
-**Structure Decision**: Reconcile logic lives in a new `src/core/reconcile/` module directory with four files (discovery, diff, hosts, orchestrator) to enforce clear module boundaries. This follows the user's requirement for explicit module separation and avoids polluting the existing `src/core/reconciler.ts` (which handles VM action execution, a different concern).
-
-## Module Boundaries
-
-### Module 1: Discovery (`src/core/reconcile/discovery.ts`)
-
-**Responsibility**: Query Hyper-V for VM network adapter data. Retry with polling for DHCP delay.
-
-**Exports**:
-- `discoverNetworkState(executor, vmName, options?) → Promise<DiscoveryResult>`
-- `discoverAllNetworkState(executor, vms, options?) → Promise<DiscoveryResult[]>`
-
-**Dependencies**: `src/hyperv/executor.ts`, `src/hyperv/queries.ts`
-
-**Algorithm**:
-1. Call `getVMNetworkAdapters(executor, vmName)` — new query wrapping `Get-VMNetworkAdapter`
-2. Filter adapters to the one connected to "Default Switch"
-3. Extract first IPv4 from `IPAddresses` array (filter by IPv4 regex `^\d+\.\d+\.\d+\.\d+$`)
-4. Extract all IPv6 addresses (remaining IPs that are not IPv4)
-5. If no IPv4 found and VM is Running, poll every 3 seconds up to timeout (default 60s)
-6. Return `DiscoveryResult` with all network fields
-
-**Fail-fast**: If ANY running VM has no IPv4 after timeout, the caller (orchestrator) aborts.
-
-### Module 2: Diff (`src/core/reconcile/diff.ts`)
-
-**Responsibility**: Compare discovered network state against existing state. Detect changes and set `previousIpv4`.
-
-**Exports**:
-- `diffNetworkState(existing, discovered) → NetworkStateDiff`
-
-**Algorithm**:
-1. For each VM, compare `existing.network?.ipv4` vs `discovered.ipv4`
-2. If changed: set `previousIpv4 = existing.network.ipv4`
-3. If same: preserve existing `previousIpv4` (don't overwrite)
-4. Build final `NetworkState` object with all 7 fields
-5. Flag VMs with changed IPs for logging
-
-### Module 3: Hosts Rendering + Guest Apply (`src/core/reconcile/hosts.ts`)
-
-**Responsibility**: Render `/etc/hosts` managed block content and push it into each running VM.
-
-**Exports**:
-- `renderHostsBlock(vms) → string` — generates the `# BEGIN RAGNATRAMP` ... `# END RAGNATRAMP` block
-- `syncHostsToVM(executor, vmName, hostsBlock) → Promise<HostsSyncResult>`
-- `syncHostsToAllVMs(executor, vms, hostsBlock) → Promise<HostsSyncResult[]>`
-
-**Hosts block format**:
-```
-# BEGIN RAGNATRAMP
-# Managed by ragnatramp - do not edit this block
-172.16.0.10 web
-172.16.0.11 db
-# END RAGNATRAMP
-```
-
-**Guest write mechanism**: `Invoke-Command -VMName '<name>' -ScriptBlock { ... }` where the script block:
-1. Reads current `/etc/hosts`
-2. Removes any existing `# BEGIN RAGNATRAMP` ... `# END RAGNATRAMP` block (regex)
-3. Appends the new managed block
-4. Writes back to `/etc/hosts`
-
-**Per-VM non-fatal**: Each VM's sync is wrapped in try/catch. Failures are collected and reported.
-
-### Module 4: Orchestrator (`src/core/reconcile/orchestrator.ts`)
-
-**Responsibility**: Coordinate the full reconcile workflow: discover → diff → update state → sync hosts. Support dry-run mode.
-
-**Exports**:
-- `runReconcile(executor, stateManager, config, options?) → Promise<ReconcileResult>`
-
-**Options**:
-```typescript
-interface ReconcileOptions {
-  dryRun?: boolean;    // Default: false. When true, skip steps 6–9 (no writes).
-  verbose?: boolean;   // Passed through to executor
-  timeout?: number;    // IP discovery timeout in ms (default: 60000)
-}
-```
-
-**Workflow**:
-1. Load state, get list of managed VMs
-2. Query actual VMs from Hyper-V to determine running state
-3. Call `discoverAllNetworkState()` for all running VMs
-4. **Fail-fast gate**: If any running VM lacks IPv4, abort with `ReconcileError`
-5. Call `diffNetworkState()` for each VM to compute updates
-6. **If `dryRun`**: Skip to step 10 (return results without side effects)
-7. Update state with new network data; `save()` atomically
-8. Null out network for non-running VMs
-9. Render hosts block from running VMs with IPv4
-10. Call `syncHostsToAllVMs()` — per-VM non-fatal
-11. Return `ReconcileResult` with per-VM outcomes
-
-**Dry-run behavior**: Steps 1–5 execute normally (read-only Hyper-V queries + in-memory diff). The hosts block is rendered (step 9 equivalent) and included in the result for display, but no `Invoke-Command` is executed and no state file is written. The `ReconcileResult.dryRun` flag is set to `true` so the CLI layer can format output accordingly.
-
-### Module 5: State Extension (`src/state/types.ts` + `src/state/manager.ts`)
-
-**State schema change**: Add `network` field to `VMState`:
-
-```typescript
-interface NetworkState {
-  ipv4: string | null;
-  ipv6?: string[];
-  mac: string | null;
-  adapterName?: string | null;
-  discoveredAt: string | null;
-  source: 'hyperv' | 'guest-file' | 'guest-cmd';
-  previousIpv4?: string | null;
-}
-
-interface VMState {
-  // ... existing fields ...
-  network?: NetworkState;  // Optional for backward compat
-}
-```
-
-**Migration strategy**: The `network` field is optional (`?`). Old state files without it simply have `undefined` for `network`, which the code treats as "never reconciled." No version bump needed — the field is additive and fully backward-compatible. The `StateManager.load()` method already parses the JSON without schema validation, so old files load without error.
-
-### Module 6: PowerShell Scripts (`src/hyperv/commands.ts` + `src/hyperv/queries.ts`)
-
-**New script builder**: `buildGetVMNetworkAdaptersScript(vmName)` — returns JSON array of adapter objects:
-```powershell
-$adapters = Get-VMNetworkAdapter -VMName '<name>' -ErrorAction SilentlyContinue |
-  Select-Object Name, MacAddress, SwitchName, IPAddresses
-if ($adapters -eq $null) { '[]' }
-elseif ($adapters -is [array]) { $adapters | ConvertTo-Json -Depth 3 }
-else { ConvertTo-Json @($adapters) -Depth 3 }
-```
-
-**New script builder**: `buildSyncHostsScript(vmName, hostsBlock)` — invokes PowerShell Direct:
-```powershell
-$ErrorActionPreference = 'Stop'
-Invoke-Command -VMName '<name>' -ScriptBlock {
-  param($block)
-  $hosts = Get-Content /etc/hosts -Raw
-  $pattern = '(?s)# BEGIN RAGNATRAMP.*?# END RAGNATRAMP\n?'
-  $hosts = [regex]::Replace($hosts, $pattern, '')
-  $hosts = $hosts.TrimEnd() + "`n`n" + $block + "`n"
-  Set-Content -Path /etc/hosts -Value $hosts -NoNewline
-} -ArgumentList '<hostsBlock>'
-```
-
-**New query**: `getVMNetworkAdapters(executor, vmName) → Promise<HyperVNetworkAdapter[]>`
-
-**New type**:
-```typescript
-interface HyperVNetworkAdapter {
-  Name: string;
-  MacAddress: string;
-  SwitchName: string | null;
-  IPAddresses: string[];
-}
-```
-
-## Orchestration Integration
-
-### `up` Command Workflow (Modified)
-
-The `up` command in `src/cli/commands/up.ts` currently follows this flow:
-
-```
-1. Load & validate config
-2. Preflight checks
-3. Load/create state
-4. Query VMs
-5. Compute plan
-6. Execute actions (create/start VMs)
-7. Report results
-```
-
-**Modified flow** — reconcile inserted as step 6.5:
-
-```
-1. Load & validate config
-2. Preflight checks
-3. Load/create state
-4. Query VMs
-5. Compute plan
-6. Execute actions (create/start VMs)
-6.5 Run reconcile (discover IPs → diff → update state → sync hosts)   ← NEW
-7. Report results (includes reconcile summary)
-```
-
-**Key**: Reconcile runs AFTER actions complete (VMs exist and are started) but BEFORE final reporting. Reconcile failures are caught and reported as warnings — they do NOT cause `up` to exit non-zero.
-
-### `reconcile` Standalone Command
-
-```
-1. Load & validate config
-2. Create executor (with verbose)
-3. Load state (fail if no state)
-4. Run reconcile orchestrator (pass dryRun flag from CLI)
-5. Report per-VM results (human or JSON)
-6. Exit 0 on success, 1 on fail-fast (IP missing), 2 on system error
-```
-
-**CLI flags**: `--json`, `--verbose`, `--dry-run`
-
-### `reconcile --dry-run` Mode
-
-When `--dry-run` is passed, the reconcile command performs read-only operations only:
-
-```
-1. Load & validate config
-2. Create executor (with verbose)
-3. Load state (fail if no state)
-4. Run reconcile orchestrator with dryRun: true
-   a. Discover IPs (read-only Hyper-V queries)
-   b. Compute state diffs (in-memory only)
-   c. Render hosts block (in-memory only)
-   d. Skip: state write, guest Invoke-Command
-5. Print dry-run report:
-   a. Per-VM: discovered IP, MAC, adapter name
-   b. Per-VM: diff (old → new) for changed fields, "unchanged" for stable
-   c. Rendered hosts block (full text)
-6. Exit 0 on success, 1 on fail-fast (IP missing)
-```
-
-**Human output format**:
-```
-Dry run — no changes will be applied.
-
-Discovered IPs:
-  web: 172.16.0.10 (mac: 00:15:5D:01:02:03, adapter: Network Adapter)
-  db:  172.16.0.11 (mac: 00:15:5D:01:02:04, adapter: Network Adapter)
-
-State diffs:
-  web: ipv4 unchanged (172.16.0.10)
-  db:  ipv4 changed: 172.16.0.8 → 172.16.0.11
-
-Hosts block:
-  # BEGIN RAGNATRAMP
-  # Managed by ragnatramp - do not edit this block
-  172.16.0.11 db
-  172.16.0.10 web
-  # END RAGNATRAMP
-```
-
-**JSON output** (`--dry-run --json`): Returns a `ReconcileResult` object with `dryRun: true`, containing `discovery`, `diffs`, and `hostsBlock` fields. No `hostSync` results (sync was skipped).
-
-**Constitution IX compliance**: `--dry-run` has a single, well-defined effect — suppress writes. It does not alter discovery behavior, diff logic, or output format beyond adding the "Dry run" header and omitting hosts sync results.
-
-### `status` Command (Modified)
-
-Add network fields to the status display. For each VM in state:
-- Show `ipv4` (or `ipv6` if no IPv4)
-- Show `adapterName`
-- Show `source`
-
-In `--json` mode, include the full `network` object in the output.
-
-## Verbose / Logging Integration
-
-All PowerShell commands run through `HyperVExecutor.execute()`, which already respects `--verbose`:
-- `Get-VMNetworkAdapter` scripts are logged to stderr when verbose
-- `Invoke-Command -VMName` scripts are logged to stderr when verbose
-- No behavioral changes from `--verbose` (Constitution IX compliance)
-
-Progress reporting uses the existing `OutputFormatter` patterns:
-- `output.info()` for discovery progress ("Discovering IPs...")
-- `output.success()` for per-VM success ("web: 172.16.0.10")
-- `output.warning()` for per-VM warnings ("db: powered off, skipped")
-- `output.error()` for failures
+**Structure Decision**: Follows existing single-project layout. New `src/network/` and `src/hosts/` modules parallel the existing `src/hyperv/` and `src/state/` separation. Network discovery is isolated from hosts sync because they have different dependencies (PowerShell-only vs SSH).
 
 ## Complexity Tracking
 
-No constitution violations. No complexity justifications needed.
-
-## Phase 0 Outputs
-
-See [research.md](./research.md) for PowerShell cmdlet research.
-
-## Phase 1 Outputs
-
-- [data-model.md](./data-model.md) — State schema extension
-- [quickstart.md](./quickstart.md) — Developer quickstart
-- [contracts/](./contracts/) — PowerShell script contracts
-
-## Post-Design Constitution Re-Check
-
-| Principle | Status | Notes |
-|-----------|--------|-------|
-| I. User-Space Only | PASS | `Get-VMNetworkAdapter` and `Invoke-Command -VMName` are user-space Hyper-V cmdlets. |
-| II. Safety First | PASS | Only modifies state for VMs in state file. Hosts block uses markers to isolate changes. |
-| III. Idempotent | PASS | Repeat reconcile produces same state. Hosts block replaced, not appended. |
-| IV. Deterministic Naming | PASS | Hostnames from config `name` field. No new naming scheme. |
-| V. Declarative YAML Only | PASS | No scripting in config. State extension is plain data. |
-| VI. Audit-Friendly | PASS | `--json` and `--verbose` supported. Per-VM results. |
-| VII. Predictable Failures | PASS | Fail-fast on missing IPv4. Actionable error messages. Clear exit codes. |
-| VIII. Explicit State | PASS | Network data in `.ragnatramp/state.json`. Atomic writes. |
-| IX. Explicit CLI | PASS | `--verbose` is cosmetic. `--dry-run` suppresses writes only. No hidden behavior. |
-
-**Post-Design Gate**: ALL PASS.
+No violations to justify. The design adds two new modules (`network/`, `hosts/`) which is the minimum separation needed: network discovery (host-only, PowerShell) and hosts sync (guest execution, SSH) are independent concerns with different failure modes.

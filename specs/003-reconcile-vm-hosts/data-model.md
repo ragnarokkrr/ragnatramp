@@ -1,232 +1,228 @@
 # Data Model: Reconcile VM IPs + Sync /etc/hosts
 
-**Branch**: `003-reconcile-vm-hosts` | **Date**: 2026-01-30
+**Branch**: `003-reconcile-vm-hosts` | **Date**: 2026-02-02
 
-## State Schema Extension
+## Entity Changes
 
-### Existing VMState (unchanged fields)
+### 1. NetworkState (NEW — added to VMState)
 
-```typescript
-interface VMState {
-  id: string;                    // Hyper-V VM GUID
-  name: string;                  // Full VM name: {project}-{machine}-{hash8}
-  machineName: string;           // Machine name from config (key reference)
-  diskPath: string;              // Absolute path to VHDX
-  createdAt: string;             // ISO timestamp
-  checkpoints: CheckpointState[];
-  network?: NetworkState;        // NEW — optional for backward compatibility
-}
-```
-
-### New NetworkState Interface
+Added as an optional field on the existing `VMState` interface. No migration needed — old state files without `network` parse correctly as `undefined`.
 
 ```typescript
-interface NetworkState {
-  /** Discovered IPv4 address, null if VM is off or no IPv4 assigned */
+/** Network discovery state for a managed VM */
+export interface NetworkState {
+  /** Discovered IPv4 address, null if VM is off or no IP found */
   ipv4: string | null;
-
-  /** All IPv6 addresses reported by the adapter (optional, may be empty) */
+  /** IPv6 addresses reported by adapter (optional, informational) */
   ipv6?: string[];
-
-  /** MAC address of the adapter on the Default Switch, null if off */
+  /** MAC address of adapter on Default Switch, null if no adapter */
   mac: string | null;
-
   /** Hyper-V network adapter display name (optional) */
   adapterName?: string | null;
-
-  /** ISO timestamp of when this network state was last discovered */
+  /** ISO timestamp of when this discovery was performed */
   discoveredAt: string | null;
-
-  /** Discovery mechanism used */
-  source: 'hyperv' | 'guest-file' | 'guest-cmd';
-
-  /** Previous IPv4 address, set when ipv4 changes (optional) */
+  /** How the IP was discovered */
+  source: 'hyperv' | 'arp' | 'guest-file' | 'guest-cmd';
+  /** Previous IPv4 value, stored when address changes (optional) */
   previousIpv4?: string | null;
 }
 ```
 
-### Field Details
+**Relationships**: `NetworkState` is a child of `VMState` (1:1 optional). Keyed by machine name via the parent `vms` record.
 
-| Field | Type | Nullable | Optional | Source |
-|-------|------|----------|----------|--------|
-| `ipv4` | `string` | Yes (null) | No | `Get-VMNetworkAdapter` → `IPAddresses` → first IPv4 match |
-| `ipv6` | `string[]` | — | Yes | `Get-VMNetworkAdapter` → `IPAddresses` → all non-IPv4 |
-| `mac` | `string` | Yes (null) | No | `Get-VMNetworkAdapter` → `MacAddress` |
-| `adapterName` | `string` | Yes (null) | Yes | `Get-VMNetworkAdapter` → `Name` |
-| `discoveredAt` | `string` | Yes (null) | No | Set to `new Date().toISOString()` at discovery time |
-| `source` | enum | — | No | Always `"hyperv"` in this feature (extensible) |
-| `previousIpv4` | `string` | Yes (null) | Yes | Set to prior `ipv4` when value changes |
+**Validation Rules**:
+- `ipv4`: Must match `^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$` when non-null.
+- `mac`: 12 hex chars, no delimiters (e.g., `00155DDE3309`) when non-null.
+- `discoveredAt`: ISO 8601 timestamp.
+- `source`: Enum — `"hyperv"` when IP came from KVP `IPAddresses`, `"arp"` when from `Get-NetNeighbor`, others reserved for future use.
+- `previousIpv4`: Set to prior `ipv4` value only when `ipv4` changes; otherwise left unchanged.
 
-### State Lifecycle
+### 2. VMState (MODIFIED)
 
-```
-VM Created (up command)
-  → VMState created with network: undefined
-
-First Reconcile
-  → network populated with all fields
-  → source = "hyperv"
-  → previousIpv4 = undefined (first discovery)
-
-Subsequent Reconcile (IP unchanged)
-  → network updated: discoveredAt refreshed
-  → previousIpv4 unchanged
-
-Subsequent Reconcile (IP changed)
-  → network.previousIpv4 = prior ipv4
-  → network.ipv4 = new address
-  → discoveredAt refreshed
-
-VM Powered Off
-  → network fields set to null (ipv4, mac, discoveredAt)
-  → previousIpv4 preserved (last known)
-
-VM Destroyed
-  → VMState removed entirely (existing behavior)
+```typescript
+export interface VMState {
+  id: string;
+  name: string;
+  machineName: string;
+  diskPath: string;
+  createdAt: string;
+  checkpoints: CheckpointState[];
+  /** Network discovery state — added by reconcile */
+  network?: NetworkState;  // NEW — optional, backward-compatible
+}
 ```
 
-### Example State File (after reconcile)
+**Backward Compatibility**: The `network` field is optional. Code reading it uses optional chaining (`vm.network?.ipv4`). No version bump to `StateFile.version`.
+
+### 3. SSHConfig (NEW — added to config types)
+
+Added to YAML configuration for SSH credential management.
+
+```typescript
+/** SSH configuration for guest execution */
+export interface SSHConfig {
+  /** SSH username */
+  user: string;
+  /** Path to SSH private key file */
+  private_key: string;
+}
+```
+
+**Relationships**: Can appear at project level (`defaults.ssh`) and per-machine (`machines[].ssh`). Machine-level overrides project default.
+
+### 4. RagnatrampConfig (MODIFIED)
+
+```typescript
+export interface DefaultsConfig {
+  cpu?: number;
+  memory?: number;
+  base_image?: string;
+  disk_strategy?: 'differencing' | 'copy';
+  ssh?: SSHConfig;  // NEW — project-level SSH defaults
+}
+
+export interface MachineConfig {
+  name: string;
+  cpu?: number;
+  memory?: number;
+  base_image?: string;
+  ssh?: SSHConfig;  // NEW — per-machine SSH override
+}
+```
+
+### 5. ResolvedMachine (MODIFIED)
+
+```typescript
+export interface ResolvedMachine {
+  name: string;
+  cpu: number;
+  memory: number;
+  baseImage: string;
+  diskStrategy: 'differencing' | 'copy';
+  ssh?: ResolvedSSHConfig;  // NEW — resolved SSH config (optional; required for hosts sync)
+}
+
+export interface ResolvedSSHConfig {
+  user: string;
+  privateKeyPath: string;  // Absolute, expanded path
+}
+```
+
+## Transient Types (not persisted)
+
+### DiscoveryResult
+
+Returned by the tiered discovery function for each VM.
+
+```typescript
+export interface DiscoveryResult {
+  machineName: string;
+  vmName: string;
+  /** VM Hyper-V state */
+  vmState: 'Running' | 'Off' | 'Saved' | 'Paused' | string;
+  /** Discovered network state, or null if VM is not running */
+  network: NetworkState | null;
+  /** Which tier succeeded: 'kvp', 'arp', or null if both failed */
+  tier: 'kvp' | 'arp' | null;
+  /** Diagnostic warnings generated during discovery */
+  warnings: string[];
+}
+```
+
+### DiagnosticResult
+
+Result of a prerequisite check for a single VM.
+
+```typescript
+export interface DiagnosticResult {
+  machineName: string;
+  vmName: string;
+  /** KVP integration service status */
+  kvpStatus: 'OK' | 'No Contact' | 'Disabled' | 'Unknown';
+  /** Whether SSH port 22 is reachable at the discovered IP */
+  sshReachable: boolean | null;  // null if no IP discovered
+  /** Human-readable warnings */
+  warnings: string[];
+}
+```
+
+### ReconcileResult
+
+Aggregate result of the reconcile operation.
+
+```typescript
+export interface ReconcileResult {
+  success: boolean;
+  /** Per-VM discovery results */
+  discoveries: DiscoveryResult[];
+  /** Per-VM state diffs (old → new) */
+  diffs: StateDiff[];
+  /** Per-VM hosts sync results */
+  hostsSyncResults: HostsSyncResult[];
+  /** Rendered hosts block (same for all VMs) */
+  hostsBlock: string;
+  /** Aggregate warnings */
+  warnings: string[];
+}
+
+export interface StateDiff {
+  machineName: string;
+  field: string;
+  oldValue: string | null;
+  newValue: string | null;
+}
+
+export interface HostsSyncResult {
+  machineName: string;
+  success: boolean;
+  skipped: boolean;
+  skipReason?: string;
+  error?: string;
+}
+```
+
+## JSON Schema Changes
+
+### New `ssh` block in schema.json
 
 ```json
 {
-  "version": 1,
-  "configHash": "a1b2c3d4",
-  "configPath": "C:\\project\\ragnatramp.yaml",
-  "project": "myproject",
-  "createdAt": "2026-01-30T10:00:00.000Z",
-  "updatedAt": "2026-01-30T10:05:00.000Z",
-  "vms": {
-    "web": {
-      "id": "abc12345-...",
-      "name": "myproject-web-a1b2c3d4",
-      "machineName": "web",
-      "diskPath": "C:\\...\\web.vhdx",
-      "createdAt": "2026-01-30T10:00:00.000Z",
-      "checkpoints": [],
-      "network": {
-        "ipv4": "172.16.0.10",
-        "ipv6": ["fe80::1234:5678:abcd:ef01"],
-        "mac": "00:15:5D:01:02:03",
-        "adapterName": "Network Adapter",
-        "discoveredAt": "2026-01-30T10:05:00.000Z",
-        "source": "hyperv"
-      }
-    },
-    "db": {
-      "id": "def67890-...",
-      "name": "myproject-db-a1b2c3d4",
-      "machineName": "db",
-      "diskPath": "C:\\...\\db.vhdx",
-      "createdAt": "2026-01-30T10:00:05.000Z",
-      "checkpoints": [],
-      "network": {
-        "ipv4": "172.16.0.11",
-        "mac": "00:15:5D:01:02:04",
-        "discoveredAt": "2026-01-30T10:05:00.000Z",
-        "source": "hyperv"
+  "ssh": {
+    "type": "object",
+    "description": "SSH credentials for guest execution",
+    "additionalProperties": false,
+    "required": ["user", "private_key"],
+    "properties": {
+      "user": {
+        "type": "string",
+        "description": "SSH username",
+        "minLength": 1,
+        "maxLength": 32
+      },
+      "private_key": {
+        "type": "string",
+        "description": "Path to SSH private key file",
+        "minLength": 1
       }
     }
   }
 }
 ```
 
-### Migration Compatibility
+Added to both `defaults.properties` and `machines.items.properties`.
 
-Old state files (pre-reconcile) have no `network` field on VMState entries. The new code:
+## State Transitions
 
-1. **Reading**: `vm.network?.ipv4` returns `undefined` — treated as "never reconciled"
-2. **Writing**: First reconcile populates the `network` object
-3. **No version bump**: `version: 1` remains valid — the change is additive
-
-No migration code needed. No backward-breaking changes.
-
-## Hyper-V Types Extension
-
-### New: HyperVNetworkAdapter
-
-```typescript
-interface HyperVNetworkAdapter {
-  /** Adapter display name (e.g., "Network Adapter") */
-  Name: string;
-  /** MAC address without delimiters (e.g., "001122334455") */
-  MacAddress: string;
-  /** Connected virtual switch name (null if disconnected) */
-  SwitchName: string | null;
-  /** IP addresses reported by guest integration services (mixed IPv4/IPv6) */
-  IPAddresses: string[];
-}
+```
+VM Created (no network) → reconcile discovers IP → network.ipv4 set, source set
+VM Running (has IP)      → reconcile re-runs     → network unchanged (idempotent) or ipv4 updated + previousIpv4 set
+VM Stopped               → reconcile runs        → network fields set to null
+VM Destroyed             → VM removed from state  → network removed with VM
 ```
 
-## Reconcile Result Types
+## Duplicate IP Detection
 
-### DiscoveryResult
-
-```typescript
-interface DiscoveryResult {
-  machineName: string;
-  vmName: string;
-  state: 'discovered' | 'no-ip' | 'off' | 'missing';
-  network: NetworkState | null;
-}
-```
-
-### NetworkStateDiff
-
-```typescript
-interface NetworkStateDiff {
-  machineName: string;
-  changed: boolean;
-  previousIpv4: string | null;
-  network: NetworkState;
-}
-```
-
-### HostsSyncResult
-
-```typescript
-interface HostsSyncResult {
-  machineName: string;
-  vmName: string;
-  status: 'synced' | 'skipped' | 'failed';
-  error?: string;
-}
-```
-
-### ReconcileResult
-
-```typescript
-interface ReconcileResult {
-  success: boolean;
-  dryRun: boolean;
-  discovery: DiscoveryResult[];
-  diffs: NetworkStateDiff[];
-  hostsBlock: string;              // Rendered managed block (always computed)
-  hostSync: HostsSyncResult[];     // Empty when dryRun is true
-  summary: {
-    discovered: number;
-    changed: number;
-    synced: number;                // 0 when dryRun is true
-    skipped: number;
-    failed: number;                // 0 when dryRun is true
-  };
-}
-```
-
-## Error Types
-
-### ReconcileError
-
-```typescript
-class ReconcileError extends RagnatrampError {
-  constructor(
-    message: string,
-    code: 'RECONCILE_IP_FAILED' | 'RECONCILE_HOSTS_FAILED' | 'RECONCILE_NO_VMS',
-    suggestion?: string
-  )
-}
-```
-
-Exit code mapping:
-- `RECONCILE_IP_FAILED` → exit 1 (user-actionable: VM has no IP)
-- `RECONCILE_HOSTS_FAILED` → exit 2 (system error: guest write failed)
-- `RECONCILE_NO_VMS` → exit 0 (informational: no VMs to reconcile)
+During reconcile, after all VMs are discovered:
+- Build `Map<string, string[]>` of IPv4 → machineNames.
+- If any IPv4 maps to more than one machine, flag as conflicting.
+- Conflicting VMs: IP still persisted in state, but hosts sync skipped for those VMs with a warning.

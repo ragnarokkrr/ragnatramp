@@ -102,6 +102,103 @@ This is documented as an assumption in the spec: "Hyper-V Guest Integration Serv
 - Bump version to 2 + migration function: Unnecessary for an additive field.
 - Separate network state file: Rejected per spec — state remains the single file.
 
+## R8: KVP Data Exchange Gap — IPAddresses Empty Despite Guest Having IP
+
+**Status**: CLOSED — root cause confirmed, ARP fallback validated, spec revision needed.
+
+**Date**: 2026-01-30 (opened) → 2026-02-02 (closed)
+
+### Original Observation
+
+On a running VM (`testproject2-web-93b099f9`), `Get-VMNetworkAdapter` returns an adapter on the Default Switch with `Status: {Ok}`, a valid MAC (`00155DDE332C`), but `IPAddresses: {}` (empty). Meanwhile, `hostname -I` inside the VM (via Hyper-V console) confirms the guest already has a DHCP-assigned IPv4 address.
+
+### Root Cause (confirmed)
+
+Two independent guest-side dependencies are missing from standard Linux VM images:
+
+**1. KVP daemon (`hv_kvp_daemon`) — affects IP discovery:**
+
+The `IPAddresses` field in `Get-VMNetworkAdapter` is populated by the Hyper-V KVP (Key-Value Pair) Data Exchange integration service. The guest must run `hv_kvp_daemon` for IP data to flow from guest → hypervisor. Without it, the host-side integration service shows `PrimaryStatusDescription: "No Contact"` and `IPAddresses` is always empty.
+
+- On Ubuntu, the daemon is provided by `linux-cloud-tools-$(uname -r)`.
+- The kernel module `hv_utils` is loaded by default (provides the VMBus transport), but the userspace daemon is **not installed by default**.
+- After installing the package, systemd may fail to start the service because the device unit `sys-devices-virtual-misc-vmbus!hv_kvp.device` doesn't trigger. Fix: `sudo rmmod hv_utils && sudo modprobe hv_utils` (or reboot).
+- Once running, `IPAddresses` populates immediately with both IPv4 and IPv6.
+
+**2. PowerShell (`pwsh`) — affects guest execution (hosts sync + guest-cmd fallback):**
+
+`Invoke-Command -VMName` (PowerShell Direct) requires PowerShell to be installed inside the Linux guest. This is separate from KVP — fixing KVP does NOT fix PowerShell Direct. Without `pwsh`, all guest execution fails with: `"An error has occurred which Windows PowerShell cannot handle. A remote session might have ended."`
+
+PowerShell is not installed by default on any standard Linux distribution.
+
+### Verified Test Results (2026-02-02, VM: `k3s-vm-ubuntu`)
+
+**Before KVP fix:**
+| Check | Host-side | Guest-side |
+|---|---|---|
+| KVP Integration Service | Enabled, **"No Contact"** | `hv-kvp-daemon.service` not found |
+| `IPAddresses` | `{}` (empty) | `hostname -I` → `172.18.185.163` |
+| PowerShell Direct | **FAILED** — session broken | `pwsh` not installed |
+| ARP table (`Get-NetNeighbor`) | MAC `00-15-5D-DE-33-09` → `172.18.185.163` (**Permanent**) | N/A |
+
+**After KVP fix** (`apt install linux-cloud-tools-$(uname -r)` + module reload):
+| Check | Host-side | Guest-side |
+|---|---|---|
+| KVP Integration Service | Enabled, **"OK"** | `hv-kvp-daemon` active (running) |
+| `IPAddresses` | `{172.18.185.163, fe80::215:5dff:fede:3309}` | — |
+| PowerShell Direct | **Still FAILED** (needs `pwsh`) | `pwsh` still not installed |
+
+### ARP-Based Discovery (Option 4 — new)
+
+Discovered during investigation: the host's ARP table reliably maps VM MAC addresses to IPs with **zero guest-side dependencies**.
+
+**Algorithm**:
+1. `Get-VMNetworkAdapter -VMName '<name>'` → get `MacAddress` (e.g., `00155DDE3309`)
+2. Format MAC with delimiters: `00-15-5D-DE-33-09`
+3. `Get-NetNeighbor -InterfaceAlias 'vEthernet (Default Switch)'` → find entry matching MAC + `AddressFamily -eq 'IPv4'`
+4. Return the `IPAddress` from the matching entry
+
+**Properties**:
+- ARP entries for Hyper-V VMs have `State: Permanent` — they do not expire.
+- Entries are maintained by the Hyper-V virtual switch, available as soon as the guest acquires a DHCP lease.
+- Stale entries from deleted VMs persist in the ARP table but cause no false matches (we only query MACs of known VMs from state).
+- Confirmed reachable: `Test-Connection` to the ARP-discovered IP returns True.
+- `source` field value: `"arp"` (new value, needs schema addition).
+
+### Impact on Spec
+
+Two functional requirements are affected:
+
+**FR-002 (IP Discovery)**: Currently mandates KVP-only single-pass via `Get-VMNetworkAdapter → IPAddresses`. This silently fails on any guest without `linux-cloud-tools`. Options:
+- **A. KVP-only + prerequisite**: Keep FR-002 as-is, document `linux-cloud-tools` as hard prerequisite, add diagnostic check via `Get-VMIntegrationService` for early actionable error.
+- **B. ARP-primary**: Replace KVP with ARP-based discovery as the primary mechanism. Zero guest dependencies. KVP becomes optional enrichment.
+- **C. Tiered KVP→ARP**: Try KVP first (fast, rich data), fall back to ARP if `IPAddresses` is empty. Best UX with soft degradation. `source` indicates provenance.
+
+**FR-006 (Hosts Sync via PowerShell Direct)**: Currently mandates `Invoke-Command -VMName`. This requires `pwsh` in every Linux guest — an uncommon setup. Options:
+- **D. PowerShell Direct + prerequisite**: Keep FR-006 as-is, document `pwsh` as hard prerequisite.
+- **E. SSH-based execution**: Switch to SSH transport (guest already has `sshd` running). Requires lifting the spec's SSH prohibition. Uses ARP-discovered IP + configurable credentials.
+- **F. Defer hosts sync**: Ship IP discovery (Story 1) without hosts sync (Story 2). Revisit guest execution transport after MVP feedback.
+
+### Decision
+
+**Pending** — requires `/speckit.clarify` to update the spec with the chosen options.
+
+**Recommended combination**: **C + E** — tiered IP discovery (KVP→ARP) with SSH-based guest execution. Rationale:
+- C provides the best resilience: KVP is preferred when available (richer data, faster), ARP catches the common case where `linux-cloud-tools` is missing.
+- E acknowledges reality: SSH is universally available on Linux VMs, PowerShell is not. The SSH prohibition was likely inherited from Vagrant conventions that don't apply here.
+- Together, the only hard guest prerequisite is `sshd` (near-universal), not `linux-cloud-tools` + `pwsh` (uncommon combination).
+
+### Completed Investigation Steps
+
+- [x] Check if `hv_kvp_daemon` is running inside the test VM → **not installed**
+- [x] Test `Get-VMIntegrationService` from host → **Enabled but "No Contact"**
+- [x] Install `linux-cloud-tools`, start daemon, verify `IPAddresses` populates → **confirmed**
+- [x] Test PowerShell Direct after KVP fix → **still fails (no `pwsh`)**
+- [x] Discover and validate ARP-based IP discovery → **works, Permanent state, zero guest deps**
+- [x] Decide on options → **recommend C + E, pending spec clarification**
+
+---
+
 ## R7: Duplicate IP Detection
 
 **Decision**: After discovering all VM IPs, check for duplicates. If two VMs report the same IPv4, warn and skip hosts sync for the conflicting VMs.
